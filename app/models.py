@@ -21,6 +21,14 @@ class User:
         self.is_admin = is_admin
 
     @staticmethod
+    def get_all():
+        result = query_db('SELECT * from Users')
+        users = []
+        for r in result:
+            users.append(User(r['id'], r['username'], bool(r['is_admin'])))
+        return users
+
+    @staticmethod
     def create_salt_and_hashed_password(password):
         salt = os.urandom(32)
         salt = b64encode(salt).decode('utf-8')
@@ -39,27 +47,27 @@ class User:
 
     @staticmethod
     def password_compare(a, b):
-        # Todo: Add constant time implementation here
+        # TODO: Add constant time implementation here
         return a == b
 
     @staticmethod
     def get_user_by_id(user_id):
         app.logger.debug("User::get_user_by_id called with {:d}".format(user_id))
-        user_data = query_db('Select * from Users where id = ?', [user_id], one=True)
+        user_data = query_db('SELECT * from Users WHERE id = ?', [user_id], one=True)
         if user_data is None:
             return None
         return User(user_data['id'], user_data['username'], bool(user_data['is_admin']))
 
     @staticmethod
     def get_user_by_name(username):
-        user_data = query_db('Select * from Users where username = ?', [username], one=True)
+        user_data = query_db('SELECT * from Users WHERE username = ?', [username], one=True)
         if user_data is None:
             return None
         return User(user_data['id'], user_data['username'], user_data['is_admin'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
-        user_data = query_db('Select * from Users where username = ?', [username], one=True)
+        user_data = query_db('SELECT * FROM Users WHERE username = ?', [username], one=True)
         if user_data is None:
             return None
         if not User.password_compare(user_data['password_token'], hashed_password):
@@ -69,7 +77,7 @@ class User:
 
     @staticmethod
     def get_salt(username):
-        salt = query_db('Select password_salt from Users where username = ?', [username], one=True)
+        salt = query_db('SELECT password_salt FROM Users WHERE username = ?', [username], one=True)
         if salt is None:
             return None
         return salt['password_salt']
@@ -78,8 +86,8 @@ class User:
     def create(username, salt, hashed_password, is_admin=False):
         try:
             result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
-        except sqlite3.IntegrityError:
-            # Cannot create user, maybe already exists
+        except sqlite3.Error as e:
+            app.logger.debug('sqlite3 error ' + e.message)
             return None
         if not result:
             return None
@@ -87,10 +95,22 @@ class User:
 
     def delete(self):
         app.logger.debug("Delete user with id {:d}".format(self.id))
-        insert_db('DELETE FROM Users where id = ?', [self.id])
+        # Delete all Sessions
+        Session.delete_all(self.id)
+        # TODO: delete all posts
+        # TODO: delete all messages
+        # TODO: foreign key handling
+        insert_db('DELETE FROM Users WHERE id = ?', [self.id])
 
     def change_role(self, is_admin):
-        pass
+        if self.is_admin == is_admin:
+            # Value does not change, nothing to do
+            return
+        try:
+            insert_db('UPDATE Users SET is_admin = ? WHERE id = ?', [int(is_admin), self.id])
+            self.is_admin = is_admin
+        except sqlite3.Error as e:
+            app.logger.debug('sqlite3 error ' + e.message)
 
 
 class Post:
@@ -102,8 +122,8 @@ class Post:
         self.content = content
 
     @staticmethod
-    def get_all():
-        result = query_db('SELECT * from Posts')
+    def get_posts_by_user_id(user_id):
+        result = query_db('SELECT * from Posts WHERE author_id = ?', [user_id])
         posts = []
         for r in result:
             posts.append(Post(r['author_id'], r['content']))
@@ -113,7 +133,8 @@ class Post:
     def create(author_id, content):
         try:
             result = insert_db('INSERT into Posts (author_id, content) VALUES (?, ?)', [author_id, content])
-        except sqlite3.IntegrityError:
+        except sqlite3.Error as e:
+            app.logger.debug('sqlite3 error ' + e.message)
             return None
         if not result:
             return None
@@ -123,27 +144,45 @@ class Post:
 class Message:
     # int id (Primary key)
     # int author_id -> User.id
-    # int receipient -> User.id
+    # int recipient_id -> User.id
     # str Content
     # str file_id
-    def Message(self):
-        pass
+    def __init__(self, author_id, recipient_id, content):
+        self.author_id = author_id
+        self.recipient_id = recipient_id
+        self.content = content
 
-    def create(self):
-        pass
+    @staticmethod
+    def get_messages_by_user_id(user_id):
+        result = query_db('SELECT * from Messages WHERE recipient_id = ?', [user_id])
+        messages = []
+        for r in result:
+            messages.append(Message(r['author_id'], r['recipient_id'], r['content']))
+        return messages
+
+    @staticmethod
+    def create(author_id, recipient_id, content):
+        try:
+            result = insert_db('INSERT INTO Messages (author_id, recipient_id, content) VALUES (?, ?, ?)', [author_id, recipient_id, content])
+        except sqlite3.Error as e:
+            app.logger.debug('sqlite3 error ' + e.message)
+            return None
+        if not result:
+            return None
+        return True
 
 
 class Session:
     # int id (Primary key)
     # str session_token
     # int user_id -> User.id
-    # Todo: Add namespace to SESSION_KEY
+    # TODO: Add namespace to SESSION_KEY
     SESSION_KEY = 'spring_session_key'
 
     @staticmethod
     def active_user(session_token):
         app.logger.debug("Get active user")
-        user_id = query_db('SELECT user_id from Sessions where session_token = ?', [session_token], one=True)
+        user_id = query_db('SELECT user_id from Sessions WHERE session_token = ?', [session_token], one=True)
         if user_id is None:
             return None
         return User.get_user_by_id(user_id['user_id'])
@@ -159,9 +198,11 @@ class Session:
     @staticmethod
     def delete(user_id, session_token):
         app.logger.debug("Delete session {:s} for user id {:d}".format(session_token, user_id))
-        insert_db('DELETE FROM Sessions where user_id = ? AND session_token = ?', [user_id, session_token])
+        insert_db('DELETE FROM Sessions WHERE user_id = ? AND session_token = ?', [user_id, session_token])
 
     @staticmethod
     def delete_all(user_id):
         app.logger.debug("Delete all session for user id {:d}".format( user_id))
-        insert_db('DELETE FROM Sessions where user_id = ?', [user_id])
+        insert_db('DELETE FROM Sessions WHERE user_id = ?', [user_id])
+
+    # TODO: @appp.teardoen -> Delete all sessions

@@ -46,7 +46,7 @@ def initdb_command():
 
 
 def query_db(query, args=(), one=False):
-    # Todo: Exception handling?
+    # TODO: Exception handling?
     cur = get_db().execute(query, args)
     rv = cur.fetchall()
     cur.close()
@@ -54,7 +54,7 @@ def query_db(query, args=(), one=False):
 
 
 def insert_db(query, args=()):
-    # Todo: Exception handling?
+    # TODO: Exception handling?
     cur = get_db().execute(query, args)
     get_db().commit()
     cur.close()
