@@ -6,7 +6,6 @@ from base64 import b64encode
 from werkzeug.utils import secure_filename
 from helpers import allowed_file
 from db import query_db, insert_db
-
 from app import app
 
 

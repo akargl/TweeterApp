@@ -2,6 +2,7 @@ from flask import request, redirect, url_for, make_response, g, abort
 from app import app
 from helpers import login_required, admin_required
 from models import Session, User, Post, Message
+from templates import TemplateManager
 
 # TODO:
 #
@@ -50,7 +51,7 @@ def index():
 def login():
     # Post: params[username, password]
     if request.method == 'GET':
-        return "Login"
+        return TemplateManager.get_login_template()
     else:
         username = request.form['username']
         password = request.form['password']
@@ -65,7 +66,7 @@ def login():
         salt = User.get_salt(username)
         if not salt:
             # User not found
-            return "User not found"
+            return TemplateManager.get_login_template(["User not found"])
 
         _, hashed_password = User.create_hashed_password(salt, password)
 
@@ -73,7 +74,7 @@ def login():
         user = User.get_and_validate_user(username, hashed_password)
         if not user:
             # TODO: error handling
-            return "Invalid password"
+            return TemplateManager.get_login_template(["Invalid password"])
 
         result, session_token = Session.new_session(user)
         if not result:
@@ -96,10 +97,6 @@ def logout():
     return redirect(url_for('login'))
 
 
-def render_register(errors=[]):
-    return "Register " + " ".join(errors)
-
-
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     # Post: params[username, password]
@@ -109,7 +106,7 @@ def register():
         return redirect(url_for('index'))
 
     if request.method == 'GET':
-        return render_register()
+        return TemplateManager.get_register_template()
     else:
         errors = []
         username = request.form['username']
@@ -125,7 +122,7 @@ def register():
             errors.append('Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
 
         if len(errors):
-            return render_register(errors)
+            return TemplateManager.get_register_template(errors)
 
         app.logger.debug("User: {:s}:{:s}".format(username, password))
 
@@ -134,7 +131,7 @@ def register():
         if not user:
             # User already exists
             errors.append('User already exists')
-            return render_register(errors)
+            return TemplateManager.get_register_template(errors)
 
         return redirect(url_for('login'), code=303)
 
