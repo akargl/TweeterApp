@@ -44,6 +44,12 @@ def initdb_command():
     User.create(username, salt, hashed_password, True)
     print('Admin user created: username: {:s}, password: {:s}'.format(username, password))
 
+    # TODO: Remove
+    username = 'root1'
+    password = 'root1'
+    salt, hashed_password = User.create_salt_and_hashed_password(password)
+    User.create(username, salt, hashed_password, True)
+
 
 def query_db(query, args=(), one=False):
     # TODO: Exception handling?

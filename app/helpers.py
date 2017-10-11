@@ -1,5 +1,12 @@
 from functools import wraps
 from flask import g, request, redirect, url_for, abort
+from app import app
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
 from models import Session
 
 
@@ -15,7 +22,6 @@ def login_required(f):
         if user is None:
             return redirect(url_for('login', next=request.url))
         g.user = user
-
         return f(*args, **kwargs)
     return decorated_function
 
