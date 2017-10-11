@@ -1,7 +1,8 @@
 import os
 import sqlite3
+import hashlib
+from hmac import compare_digest
 from base64 import b64encode
-from Crypto.Hash import SHA256
 from db import query_db, insert_db
 from app import app
 
@@ -14,6 +15,10 @@ class User:
     MAX_USERNAME_LEN = 256
     MIN_PASSWORD_LEN = 8
     MAX_PASSWORD_LEN = 256
+
+    SALT_LENGTH = 32
+    HASH_ALGO = 'sha256'
+    HASH_ITERATIONS = 10000
 
     def __init__(self, id, username, is_admin):
         self.id = id
@@ -30,25 +35,22 @@ class User:
 
     @staticmethod
     def create_salt_and_hashed_password(password):
-        salt = os.urandom(32)
-        salt = b64encode(salt).decode('utf-8')
+        salt = os.urandom(User.SALT_LENGTH)
+        salt = b64encode(salt)
 
         return User.create_hashed_password(salt, password)
 
     @staticmethod
     def create_hashed_password(salt, password):
-        salted_pw = password + salt
-        hash = SHA256.new()
-        hash.update(salted_pw)
-        hashed_password = hash.digest()
-        hashed_password = b64encode(hashed_password).decode('utf-8')
+        hash_bytes = hashlib.pbkdf2_hmac(User.HASH_ALGO, password, salt, User.HASH_ITERATIONS)
+        hashed_password = b64encode(hash_bytes)
 
         return salt, hashed_password
 
     @staticmethod
     def password_compare(a, b):
-        # TODO: Add constant time implementation here
-        return a == b
+        # TODO: check if we aren't throwing away entropy here
+        return compare_digest(a.decode('utf-8'), b.decode('utf-8'))
 
     @staticmethod
     def get_user_by_id(user_id):
@@ -178,6 +180,7 @@ class Session:
     # int user_id -> User.id
     # TODO: Add namespace to SESSION_KEY
     SESSION_KEY = 'spring_session_key'
+    TOKEN_LENGTH = 32
 
     @staticmethod
     def active_user(session_token):
@@ -190,7 +193,7 @@ class Session:
     @staticmethod
     def new_session(user):
         app.logger.debug("Create new session for user {:s}".format(user.username))
-        session_token = os.urandom(32)
+        session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
         result = insert_db('INSERT INTO Sessions (session_token, user_id) Values (?, ?)', [ session_token, user.id])
         return result, session_token
