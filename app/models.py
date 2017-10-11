@@ -1,0 +1,152 @@
+import os
+import sqlite3
+from base64 import b64encode
+from Crypto.Hash import SHA256
+from db import query_db, insert_db
+from app import app
+
+
+class User:
+    # int id (Primary key)
+    # str username
+    # str password_token
+    # bool is_admin
+    MAX_USERNAME_LEN = 256
+    MIN_PASSWORD_LEN = 8
+    MAX_PASSWORD_LEN = 256
+
+    def __init__(self, id, username, is_admin):
+        self.id = id
+        self.username = username
+        self.is_admin = is_admin
+
+    @staticmethod
+    def create_salt_and_hashed_password(password):
+        salt = os.urandom(32)
+        salt = b64encode(salt).decode('utf-8')
+
+        return User.create_hashed_password(salt, password)
+
+    @staticmethod
+    def create_hashed_password(salt, password):
+        salted_pw = password + salt
+        hash = SHA256.new()
+        hash.update(salted_pw)
+        hashed_password = hash.digest()
+        hashed_password = b64encode(hashed_password).decode('utf-8')
+
+        return salt, hashed_password
+
+    @staticmethod
+    def password_compare(a, b):
+        # Todo: Add constant time implementation here
+        return a == b
+
+    @staticmethod
+    def get_user_by_id(user_id):
+        app.logger.debug("User::get_user_by_id called with {:d}".format(user_id))
+        user_data = query_db('Select * from Users where id = ?', [user_id], one=True)
+        if user_data is None:
+            return None
+        return User(user_data['id'], user_data['username'], bool(user_data['is_admin']))
+
+    @staticmethod
+    def get_user_by_name(username):
+        user_data = query_db('Select * from Users where username = ?', [username], one=True)
+        if user_data is None:
+            return None
+        return User(user_data['id'], user_data['username'], user_data['is_admin'])
+
+    @staticmethod
+    def get_and_validate_user(username, hashed_password):
+        user_data = query_db('Select * from Users where username = ?', [username], one=True)
+        if user_data is None:
+            return None
+        if not User.password_compare(user_data['password_token'], hashed_password):
+            return None
+        return User(user_data['id'], user_data['username'], user_data['is_admin'])
+
+
+    @staticmethod
+    def get_salt(username):
+        salt = query_db('Select password_salt from Users where username = ?', [username], one=True)
+        if salt is None:
+            return None
+        return salt['password_salt']
+
+    @staticmethod
+    def create(username, salt, hashed_password, is_admin=False):
+        try:
+            result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
+        except sqlite3.IntegrityError:
+            # Cannot create user, maybe already exists
+            return None
+        if not result:
+            return None
+        return User.get_user_by_name(username)
+
+    def delete(self):
+        app.logger.debug("Delete user with id {:d}".format(self.id))
+        insert_db('DELETE FROM Users where id = ?', [self.id])
+
+    def change_role(self, is_admin):
+        pass
+
+
+class Post:
+    # int id (Primary key)
+    # int author_id -> User.id
+    # str Content
+    # str file_id
+    def Post(self):
+        pass
+
+    def create(self):
+        pass
+
+
+class Message:
+    # int id (Primary key)
+    # int author_id -> User.id
+    # int receipient -> User.id
+    # str Content
+    # str file_id
+    def Message(self):
+        pass
+
+    def create(self):
+        pass
+
+
+class Session:
+    # int id (Primary key)
+    # str session_token
+    # int user_id -> User.id
+    # Todo: Add namespace to SESSION_KEY
+    SESSION_KEY = 'spring_session_key'
+
+    @staticmethod
+    def active_user(session_token):
+        app.logger.debug("Get active user")
+        user_id = query_db('SELECT user_id from Sessions where session_token = ?', [session_token], one=True)
+        if user_id is None:
+            return None
+        return User.get_user_by_id(user_id['user_id'])
+
+    @staticmethod
+    def new_session(user):
+        app.logger.debug("Create new session for user {:s}".format(user.username))
+        session_token = os.urandom(32)
+        session_token = b64encode(session_token).decode('utf-8')
+        result = insert_db('INSERT INTO Sessions (session_token, user_id) Values (?, ?)', [ session_token, user.id])
+        return result, session_token
+
+    @staticmethod
+    def delete(user_id, session_token):
+        app.logger.debug("Delete session {:s} for user id {:d}".format(session_token, user_id))
+        insert_db('DELETE FROM Sessions where user_id = ? AND session_token = ?', [user_id, session_token])
+
+    @staticmethod
+    def delete_all(user_id):
+        app.logger.debug("Delete all session for user id {:d}".format( user_id))
+        insert_db('DELETE FROM Sessions where user_id = ?', [user_id])
