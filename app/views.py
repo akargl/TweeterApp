@@ -1,14 +1,14 @@
 from flask import request, redirect, url_for, make_response, g
 from app import app
 from helpers import login_required, admin_required
-from models import Session, User
+from models import Session, User, Post
 
 # Todos:
 #
 # Minimal template engine
 # Session handling
 #   + Expirary date for cookies
-# Public messages
+# View other userpages/feeds
 # Private Conversations
 # Admin Features
 #
@@ -19,17 +19,28 @@ from models import Session, User
 # Remove sensitive debug output (e.g. passwords)
 # Size limits for database entries
 
+def render_index(errors=[]):
+    posts = Post.get_all()
+    resp = ""
+    if len(errors):
+        resp + " ".join(errors)
+    resp += "Content: " + " ".join(p.content for p in posts)
+    return resp
+
 
 @app.route("/", methods=['GET', 'POST'])
 @login_required
 def index():
-    for k, v in request.cookies.items():
-        app.logger.debug(k)
-        app.logger.debug(v)
-
-    # Displays login form if no session as active, else message feed is displayed
     # Post: params[content, file]
-    return "Flasky " + g.user.username
+    if request.method == 'GET':
+        return render_index()
+    else:
+        content = request.form['content']
+        # Todo: XSS sanitizing
+        post = Post.create(g.user.id, content)
+        if not post:
+            return render_index(['Could not create post'])
+        return render_index()
 
 
 @app.route("/login", methods=['GET', 'POST'])

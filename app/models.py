@@ -97,12 +97,27 @@ class Post:
     # int id (Primary key)
     # int author_id -> User.id
     # str Content
-    # str file_id
-    def Post(self):
-        pass
+    def __init__(self, author_id, content):
+        self.author_id = author_id
+        self.content = content
 
-    def create(self):
-        pass
+    @staticmethod
+    def get_all():
+        result = query_db('SELECT * from Posts')
+        posts = []
+        for r in result:
+            posts.append(Post(r['author_id'], r['content']))
+        return posts
+
+    @staticmethod
+    def create(author_id, content):
+        try:
+            result = insert_db('INSERT into Posts (author_id, content) VALUES (?, ?)', [author_id, content])
+        except sqlite3.IntegrityError:
+            return None
+        if not result:
+            return None
+        return True
 
 
 class Message:
