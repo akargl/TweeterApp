@@ -16,6 +16,7 @@ from models import Session, User, Post, Message
 # Sample Content
 # Tests
 # Remove sensitive debug output (e.g. passwords)
+# User pbkdf2 for password hash
 #
 # Database:
 # Foreign key handling
@@ -150,7 +151,7 @@ def render_messages(error=None):
     messages = Message.get_messages_by_user_id(g.user.id)
     resp = ""
     if error:
-        resp + "Error: " + error
+        resp = "Error: " + error
     resp += "Messages: " + " ".join(m.content for m in messages)
     return resp
 
@@ -164,15 +165,15 @@ def messages():
     else:
         recipient_id = int(request.form['recipient_id'])
         content = request.form['content']
+        file = request.files.get('file', None)
         # TODO: XSS handling
-        # TODO: File handling
         recipient = User.get_user_by_id(recipient_id)
         if not recipient:
             # Invalid recipient
             return render_messages('Invalid recipient')
 
-        message = Message.create(g.user.id, recipient_id, content)
-        if not message:
+        status = Message.create(g.user.id, recipient_id, content, file)
+        if not status:
             return render_messages('Could not send message')
 
         return redirect(url_for('messages'), code=303)

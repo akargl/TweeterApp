@@ -21,6 +21,6 @@ CREATE TABLE `Messages` (
 	`author_id`	INTEGER NOT NULL,
 	`recipient_id`	INTEGER NOT NULL,
 	`content`	TEXT,
-	`file_id`	INTEGER
+	`filename`	TEXT
 );
 COMMIT;
