@@ -12,6 +12,7 @@ def get_db():
     if db is None:
         db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
+        query_db('PRAGMA foreign_keys = ON')
     return db
 
 

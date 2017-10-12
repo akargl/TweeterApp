@@ -21,7 +21,6 @@ from templates import TemplateManager
 # User pbkdf2 for password hash
 #
 # Database:
-# Foreign key handling
 # Size limits for database entries
 
 def render_index(errors=[]):

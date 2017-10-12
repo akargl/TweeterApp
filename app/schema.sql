@@ -8,18 +8,18 @@ CREATE TABLE "Users" (
 );
 CREATE TABLE `Sessions` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-	`user_id`	INTEGER NOT NULL,
+	`user_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`session_token`	TEXT NOT NULL UNIQUE
 );
 CREATE TABLE `Posts` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-	`author_id`	INTEGER NOT NULL,
+	`author_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`content`	TEXT
 );
 CREATE TABLE `Messages` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-	`author_id`	INTEGER NOT NULL,
-	`recipient_id`	INTEGER NOT NULL,
+	`author_id` REFERENCES Users(id) ON DELETE CASCADE,
+	`recipient_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`content`	TEXT,
 	`filename`	TEXT
 );

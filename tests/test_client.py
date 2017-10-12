@@ -1,7 +1,7 @@
 import os
 import tempfile
 import pytest
-from app import app, db
+from app import app, db, models
 
 
 @pytest.fixture
@@ -30,6 +30,19 @@ def login(client, username, password):
 
 def logout(client):
     return client.get('/logout', follow_redirects=True)
+
+
+def test_database_cascading(client):
+    with app.app_context():
+        db.create_user('foobar', 'foobar', False)
+        u = models.User.get_user_by_name('foobar')
+        models.Post.create(u.id, 'foo')
+        models.Post.create(u.id, 'foo bar')
+
+        # Deleting the user needs to delete all depending trows in other tables
+        u.delete()
+
+        assert len(models.Post.get_posts_by_user_id(u.id)) == 0
 
 
 def test_index_pointer_to_login(client):

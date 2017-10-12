@@ -99,11 +99,7 @@ class User:
 
     def delete(self):
         app.logger.debug("Delete user with id {:d}".format(self.id))
-        # Delete all Sessions
-        Session.delete_all(self.id)
-        # TODO: delete all posts
-        # TODO: delete all messages
-        # TODO: foreign key handling
+        # Delete user. All dependent data is deleted via database cascading
         insert_db('DELETE FROM Users WHERE id = ?', [self.id])
 
     def change_role(self, is_admin):
