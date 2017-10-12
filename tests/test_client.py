@@ -8,6 +8,7 @@ from app import app, db
 def client():
     db_fd, app.config['DATABASE'] = tempfile.mkstemp()
     app.config['TESTING'] = True
+    app.config['UPLOAD_FOLDER'] = "upload_fixtures"
     client = app.test_client()
 
     with app.app_context():
@@ -43,21 +44,31 @@ def test_index_pointer_to_login(client):
     ]
 
     for url in auth_urls:
-        rv = client.get(url, follow_redirects=True)
-        assert b'Login' in rv.data
+        response = client.get(url, follow_redirects=True)
+        assert b'Login' in response.data
 
 
 def test_successful_login(client):
-    rv = login(client, 'root', 'root')
-    print rv.data
-    assert b'Content' in rv.data
+    response = login(client, 'root', 'root')
+    assert b'Content' in response.data
 
 
 def test_wrong_username_login(client):
-    rv = login(client, 'foo', 'root')
-    assert b'Invalid Login or password.' in rv.data
+    response = login(client, 'foo', 'root')
+    assert b'Invalid Login or password.' in response.data
 
 
 def test_wrong_password_login(client):
-    rv = login(client, 'root', 'bar')
-    assert b'Invalid Login or password.' in rv.data
+    response = login(client, 'root', 'bar')
+    assert b'Invalid Login or password.' in response.data
+
+
+def test_api_file_access_png(client):
+    response = client.get('/api/file/panda.png')
+    print response.data
+    assert response.status_code == 200
+
+
+def test_api_file_access_symlink(client):
+    response = client.get('/api/file/symlink')
+    assert response.status_code == 404

@@ -1,4 +1,5 @@
-from flask import request, redirect, url_for, make_response, g, abort
+import os
+from flask import request, redirect, url_for, make_response, g, abort, send_from_directory
 from app import app
 from helpers import login_required, admin_required
 from models import Session, User, Post, Message
@@ -228,10 +229,21 @@ def update_delete_user(id):
         return redirect(url_for('users'), code=303)
 
 
-@app.route("/api/file/<string:id>")
-@login_required
-def api_get_file():
-    return ""
+@app.route("/api/file/<path:filename>")
+# @login_required
+def api_get_file(filename):
+    # Get absolute path of the file
+    upload_folder = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
+
+    abs_filename = os.path.join(upload_folder, filename)
+    app.logger.debug("Requested file {:s}".format(abs_filename))
+
+    # Don't serve symlinks
+    if os.path.islink(abs_filename):
+        app.logger.debug("Requested file {:s} is a symlink".format(abs_filename))
+        abort(404)
+
+    return send_from_directory(upload_folder, filename, as_attachment=True)
 
 
 @app.route("/api/users")
