@@ -3,7 +3,6 @@ import sqlite3
 from flask import g
 from app import app
 
-DATABASE = 'database.db'
 
 # Based on the flask sqlite tutorial
 # (http://flask.pocoo.org/docs/0.12/patterns/sqlite3/)
@@ -11,7 +10,7 @@ DATABASE = 'database.db'
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
     return db
 
