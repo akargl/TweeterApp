@@ -65,7 +65,6 @@ def test_wrong_password_login(client):
 
 def test_api_file_access_png(client):
     response = client.get('/api/file/panda.png')
-    print response.data
     assert response.status_code == 200
 
 
