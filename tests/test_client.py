@@ -14,6 +14,9 @@ def client():
     with app.app_context():
         db.init_db()
         db.create_user('root', 'root', True)
+        db.create_user('root1', 'root1', False)
+        models.Post.create(1, 'My news')
+        models.Message.create(2, 1, 'My message', None)
         yield client
 
     os.close(db_fd)
@@ -132,6 +135,65 @@ def test_deregister(client):
 
     assert response.status_code == 302
     assert models.User.get_user_by_name('root') is None
+
+
+def test_get_posts(client):
+    login(client, 'root', 'root')
+
+    response = client.get('/')
+
+    assert response.status_code == 200
+    assert b'My news' in response.data
+
+
+def test_post_feed(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        content='My new Post'
+    ))
+
+    assert response.status_code == 201
+    assert b'My new Post' in response.data
+
+
+def test_post_no_content_given(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/')
+
+    assert response.status_code == 400
+
+
+def test_get_messages(client):
+    login(client, 'root', 'root')
+
+    response = client.get('/messages')
+
+    assert response.status_code == 200
+    assert b'My message' in response.data
+
+
+def test_send_message(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages', data=dict(
+        recipient_id=2,
+        content="My new message"
+    ))
+
+    assert response.status_code == 201
+    messages = models.Message.get_messages_by_user_id(2)
+    assert len(messages) == 1
+    assert messages[0].content == 'My new message'
+
+
+def test_send_message_no_params(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages')
+
+    assert response.status_code == 400
 
 
 def test_api_file_access_png(client):

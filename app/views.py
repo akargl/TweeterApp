@@ -44,7 +44,7 @@ def index():
         post = Post.create(g.user.id, content)
         if not post:
             return render_index(['Could not create post'])
-        return render_index()
+        return render_index(), 201
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -156,7 +156,7 @@ def render_messages(error=None):
 @app.route("/messages", methods=['GET', 'POST'])
 @login_required
 def messages():
-    # Post: params[receipient, content, file]
+    # Post: params[recipient, content, file]
     if request.method == 'GET':
         return render_messages()
     else:
@@ -173,7 +173,7 @@ def messages():
         if not status:
             return render_messages('Could not send message')
 
-        return redirect(url_for('messages'), code=303)
+        return render_messages(), 201
 
 
 @app.route("/messages/<int:id>")
