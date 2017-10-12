@@ -130,6 +130,22 @@ class Post:
         return posts
 
     @staticmethod
+    def get_posts():
+        result = query_db('SELECT * from Posts')
+        posts = []
+        for r in result:
+            posts.append(Post(r['author_id'], r['content']))
+        return posts
+
+    @staticmethod
+    def get_latest_posts(amount):
+        result = query_db('SELECT * from Posts LIMIT ?', (amount,))
+        posts = []
+        for r in result:
+            posts.append(Post(r['author_id'], r['content']))
+        return posts
+
+    @staticmethod
     def create(author_id, content):
         try:
             result = insert_db('INSERT into Posts (author_id, content) VALUES (?, ?)', [author_id, content])

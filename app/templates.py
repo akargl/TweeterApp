@@ -1,16 +1,37 @@
 from string import Template
-from flask import url_for
+from flask import url_for, g
+from models import User
 
 class TemplateManager(object):
+    #TODO: add escaping mathods for other contexts as needed
+    @staticmethod
+    def escape_for_html_element_context(unsafe):
+        """Escape unsafe input for use inside HTML tags
+
+        Args:
+            unsafe (str): Unsafe input string to be sanitized
+
+        Returns:
+            str: sanitized input string
+        """
+        unsafe = unsafe.replace("&", "&amp;")
+        unsafe = unsafe.replace("<", "&lt;")
+        unsafe = unsafe.replace(">", "&gt;")
+        unsafe = unsafe.replace("\"", "&quot;")
+        unsafe = unsafe.replace("'", "&#x27;")
+        return unsafe.replace("/", "&#x2F;")
+
     @staticmethod
     def get_register_template(errors=[]):
-        login_template = TemplateManager.get_template("register-template", {"form_target" : url_for('register'), "form_method" : "POST"})
+        escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
+
+        register_template = TemplateManager.get_template("register-template", {"form_target" : url_for('register'), "form_method" : "POST"})
 
         nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
 
-        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in errors)
+        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
-        main_content = alerts + login_template
+        main_content = alerts + register_template
 
         main_template = TemplateManager.get_template("main-template", {"main_title" : "Register", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : nav_links})
 
@@ -19,15 +40,44 @@ class TemplateManager(object):
 
     @staticmethod
     def get_login_template(errors=[]):
+        escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
+
         login_template = TemplateManager.get_template("login-template", {"form_target" : url_for('login'), "form_method" : "POST"})
 
         nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
 
-        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in errors)
+        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         main_content = alerts + login_template
 
         main_template = TemplateManager.get_template("main-template", {"main_title" : "Login", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : nav_links})
+
+        return main_template
+
+    @staticmethod
+    def get_index_template(posts, errors=[]):
+        escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
+        escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
+        
+        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", True), TemplateManager.generate_nav_link("Messages", "messages", False)])
+
+        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
+
+        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index')})
+
+        posts_content = ""
+        for p in posts:
+            escaped_content = TemplateManager.escape_for_html_element_context(p.content)
+            author_user = User.get_user_by_id(p.author_id)
+            author_name = author_user.username if author_user is not None else "[Deleted]"
+            escaped_author_name = TemplateManager.escape_for_html_element_context(author_name)
+            post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content})
+            posts_content += post_content + "\n"
+
+
+        main_content = alerts + post_form + posts_content
+
+        main_template = TemplateManager.get_template("main-template", {"main_title" : "Posts", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username})
 
         return main_template
 
@@ -132,15 +182,15 @@ class TemplateManager(object):
     "register-template" :
     """
 <h1>Create account</h1>
-<form action="${form_target}" method="${form_method}$">
+<form action="${form_target}" method="${form_method}">
     <div class="form-group">
         <label for="username">Username</label>
-        <input type="text" class="form-control" id="username" aria-describedby="usernameHelp" placeholder="">
+        <input type="text" class="form-control" id="username" name="username" aria-describedby="usernameHelp" placeholder="">
         <small id="usernameHelp" class="form-text text-muted">Max 265 characters</small>
     </div>
     <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" class="form-control" id="password" aria-describedby="usernapasswordHelpmeHelp" placeholder="">
+        <input type="password" class="form-control" id="password" name="password" aria-describedby="passwordHelp" placeholder="">
         <small id="passwordHelp" class="form-text text-muted">Must be at least 8 and maximum 256 characters</small>
     </div>
     <button type="submit" class="btn btn-primary">Register</button>
@@ -154,6 +204,31 @@ class TemplateManager(object):
         <!--<h4 class="card-title">${post_title}</h4>-->
         <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author}</h6>
         <p class="card-text">${post_text}</p>
+    </div>
+</div>
+    """,
+
+    "post-form-template" :
+    """
+<div class="card">
+    <div class="card-body">
+        <!--<h4 class="card-title">${post_title}</h4>-->
+        <h6 class="card-subtitle mb-2 text-muted">Posting as ${username}</h6>
+        <form action="${form_target}" method="${form_method}">
+            <!-- <div class="form-group">
+                <label for="post_title">Post title</label>
+                <input type="text" class="form-control" id="post_title" name="post_title" placeholder="">
+            </div> -->
+            <div class="form-group">
+			    <label for="post_content">Your post</label>
+			    <textarea class="form-control" id="post_content" name="post_content" rows="3"></textarea>
+			</div>
+			<!-- <div class="form-group">
+			    <label for="post_attachment">Attachment</label>
+			    <input type="file" class="form-control-file" id="post_attachment" name="post_attachment">
+		  	</div> -->
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
     </div>
 </div>
     """,

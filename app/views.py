@@ -37,14 +37,20 @@ def render_index(errors=[]):
 def index():
     # Post: params[content, file]
     if request.method == 'GET':
-        return render_index()
+        posts = Post.get_posts()
+        return TemplateManager.get_index_template(posts)
+        #return render_index()
     else:
-        content = request.form['content']
+        post_content = request.form['post_content']
         # TODO: XSS sanitizing
-        post = Post.create(g.user.id, content)
+        post = Post.create(g.user.id, post_content)
         if not post:
-            return render_index(['Could not create post'])
-        return render_index(), 201
+            posts = Post.get_posts()
+            return TemplateManager.get_index_template(posts, ["Could not create post"])
+            #return render_index(['Could not create post'])
+        posts = Post.get_posts()
+        return TemplateManager.get_index_template(posts)
+        #return render_index(), 201
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -70,16 +76,13 @@ def login():
 
         _, hashed_password = User.create_hashed_password(salt, password)
 
-        # TODO: Constant time implementation
         user = User.get_and_validate_user(username, hashed_password)
         if not user:
-            # TODO: error handling
             return TemplateManager.get_login_template(["Invalid Login or password."])
 
         result, session_token = Session.new_session(user)
         if not result:
-            # TODO: Add error handling
-            pass
+            return TemplateManager.get_login_template(["Could not create session"])
 
         # Make the response and set the cookie
         url = url_for(request.args.get('next', 'index'))
@@ -108,9 +111,12 @@ def register():
     if request.method == 'GET':
         return TemplateManager.get_register_template()
     else:
+        app.logger.debug("Received register request")
         errors = []
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        app.logger.debug("User: {:s}:{:s}".format(username, password))
 
         # TODO: XSS sanitizing
 
