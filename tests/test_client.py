@@ -14,8 +14,7 @@ def client():
     with app.app_context():
         db.init_db()
         db.create_user('root', 'root', True)
-
-    yield client
+        yield client
 
     os.close(db_fd)
     os.unlink(app.config['DATABASE'])
@@ -33,16 +32,15 @@ def logout(client):
 
 
 def test_database_cascading(client):
-    with app.app_context():
-        db.create_user('foobar', 'foobar', False)
-        u = models.User.get_user_by_name('foobar')
-        models.Post.create(u.id, 'foo')
-        models.Post.create(u.id, 'foo bar')
+    db.create_user('foobar', 'foobar', False)
+    u = models.User.get_user_by_name('foobar')
+    models.Post.create(u.id, 'foo')
+    models.Post.create(u.id, 'foo bar')
 
-        # Deleting the user needs to delete all depending trows in other tables
-        u.delete()
+    # Deleting the user needs to delete all depending rows in other tables
+    u.delete()
 
-        assert len(models.Post.get_posts_by_user_id(u.id)) == 0
+    assert len(models.Post.get_posts_by_user_id(u.id)) == 0
 
 
 def test_index_pointer_to_login(client):
@@ -87,6 +85,7 @@ def test_successful_register(client):
         password='MyPassWord'
     ), follow_redirects=True)
     assert b'Login' in response.data
+    assert models.User.get_user_by_name('myuser')
 
 
 def test_register_no_form_data(client):
@@ -127,13 +126,12 @@ def test_register_too_short_password(client):
 
 
 def test_deregister(client):
-    with app.app_context():
-        login(client, 'root', 'root')
+    login(client, 'root', 'root')
 
-        response = client.get('/deregister')
+    response = client.get('/deregister')
 
-        assert response.status_code == 302
-        assert models.User.get_user_by_name('root') is None
+    assert response.status_code == 302
+    assert models.User.get_user_by_name('root') is None
 
 
 def test_api_file_access_png(client):
