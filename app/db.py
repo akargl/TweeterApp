@@ -23,12 +23,20 @@ def init_db():
         db.commit()
 
 
-@app.cli.command('initdb')
-def initdb_command():
-    """Initializes the database."""
+def create_user(username, password, is_admin):
     # Import user only here to avoid a circular dependency
     from models import User
 
+    username = 'root'
+    password = 'root'
+    salt, hashed_password = User.create_salt_and_hashed_password(password)
+    User.create(username, salt, hashed_password, True)
+    print('User created: username: {:s}, password: {:s}, is_admin: {:d}'.format(username, password, is_admin))
+
+
+@app.cli.command('initdb')
+def initdb_command():
+    """Initializes the database."""
     # Delete the database file
     try:
         os.remove('database.db')
@@ -37,17 +45,10 @@ def initdb_command():
 
     init_db()
     print('Initialized the database.')
-    username = 'root'
-    password = 'root'
-    salt, hashed_password = User.create_salt_and_hashed_password(password)
-    User.create(username, salt, hashed_password, True)
-    print('Admin user created: username: {:s}, password: {:s}'.format(username, password))
 
+    create_user('root', 'root', True)
     # TODO: Remove
-    username = 'root1'
-    password = 'root1'
-    salt, hashed_password = User.create_salt_and_hashed_password(password)
-    User.create(username, salt, hashed_password, True)
+    create_user('root1', 'root1', False)
 
 
 def query_db(query, args=(), one=False):

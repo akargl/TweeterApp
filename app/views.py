@@ -66,7 +66,7 @@ def login():
         salt = User.get_salt(username)
         if not salt:
             # User not found
-            return TemplateManager.get_login_template(["User not found"])
+            return TemplateManager.get_login_template(["Invalid Login or password."])
 
         _, hashed_password = User.create_hashed_password(salt, password)
 
@@ -74,7 +74,7 @@ def login():
         user = User.get_and_validate_user(username, hashed_password)
         if not user:
             # TODO: error handling
-            return TemplateManager.get_login_template(["Invalid password"])
+            return TemplateManager.get_login_template(["Invalid Login or password."])
 
         result, session_token = Session.new_session(user)
         if not result:
