@@ -27,8 +27,6 @@ def create_user(username, password, is_admin):
     # Import user only here to avoid a circular dependency
     from models import User
 
-    username = 'root'
-    password = 'root'
     salt, hashed_password = User.create_salt_and_hashed_password(password)
     User.create(username, salt, hashed_password, True)
     print('User created: username: {:s}, password: {:s}, is_admin: {:d}'.format(username, password, is_admin))
