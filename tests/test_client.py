@@ -76,6 +76,66 @@ def test_wrong_password_login(client):
     assert b'Invalid Login or password.' in response.data
 
 
+def test_get_register(client):
+    response = client.get('/register')
+    assert b'Register' in response.data
+
+
+def test_successful_register(client):
+    response = client.post('/register', data=dict(
+        username='myuser',
+        password='MyPassWord'
+    ), follow_redirects=True)
+    assert b'Login' in response.data
+
+
+def test_register_no_form_data(client):
+    response = client.post('/register')
+    assert response.status_code == 400
+
+
+def test_register_user_already_exists(client):
+    response = client.post('/register', data=dict(
+        username='root',
+        password='MyPassWord'
+    ))
+    assert b'User already exists' in response.data
+
+
+def test_register_no_username(client):
+    response = client.post('/register', data=dict(
+        username='',
+        password='MyPassWord'
+    ))
+    assert b'Length of username invalid' in response.data
+
+
+def test_register_no_password(client):
+    response = client.post('/register', data=dict(
+        username='myuser',
+        password=''
+    ))
+    assert b'Invalid password length' in response.data
+
+
+def test_register_too_short_password(client):
+    response = client.post('/register', data=dict(
+        username='myuser',
+        password='root'
+    ))
+    assert b'Invalid password length' in response.data
+
+
+def test_deregister(client):
+    with app.app_context():
+        login(client, 'root', 'root')
+
+        response = client.get('/deregister')
+
+        assert response.status_code == 302
+        assert models.User.get_user_by_name('root') is None
+
+
 def test_api_file_access_png(client):
     response = client.get('/api/file/panda.png')
     assert response.status_code == 200
