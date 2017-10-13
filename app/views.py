@@ -1,10 +1,10 @@
 import os
-from flask import request, redirect, url_for, make_response, g, abort, send_from_directory
+import httplib
+from flask import request, redirect, url_for, make_response, g, abort, send_from_directory, jsonify
 from app import app
 from helpers import login_required, admin_required
 from models import Session, User, Post, Message
 from templates import TemplateManager
-import httplib #from http import HTTPStatus
 
 # TODO:
 #
@@ -139,13 +139,7 @@ def register():
 
         # TODO: XSS sanitizing
 
-        # Check password policy
-        if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
-            errors.append('Length of username invalid. Maximum length: {:d}'.format(User.MAX_USERNAME_LEN))
-        # TODO: Check username for characters and numbers only
-        if len(password) < User.MIN_PASSWORD_LEN or len(password) > User.MAX_PASSWORD_LEN:
-            errors.append('Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
-
+        errors = User.verify_credential_policy(username, password)
         if len(errors):
             return TemplateManager.get_register_template(errors)
 
@@ -154,7 +148,6 @@ def register():
         salt, hashed_password = User.create_salt_and_hashed_password(password)
         user = User.create(username, salt, hashed_password)
         if not user:
-            # User already exists
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)
 
@@ -217,18 +210,18 @@ def users():
 @app.route("/users/<int:id>", methods=['GET', 'PUT', 'DELETE'])
 def user(id):
     app.logger.debug("Request " + request.method)
+    user = User.get_user_by_id(id)
+    if not user:
+        abort(httplib.NOT_FOUND)
+
     if request.method == 'GET':
-        return get_user(id)
+        return get_user(user)
     else:
-        return update_delete_user(id)
+        return update_delete_user(user)
 
 
 @login_required
-def get_user(id):
-    user = User.get_user_by_id(id)
-    if not user:
-        abort(404)
-
+def get_user(user):
     posts = Post.get_posts_by_user_id(user.id)
     resp = "User: " + user.username
     resp += " Content " + " ".join(p.content for p in posts)
@@ -236,16 +229,12 @@ def get_user(id):
 
 
 @admin_required
-def update_delete_user(id):
-    user = User.get_user_by_id(id)
-    if not user:
-        abort(httplib.NOT_FOUND)
-
+def update_delete_user(user):
     if request.method == 'PUT':
         # TODO: XSS handling
         is_admin = request.form['is_admin'] == "1"
         user.change_role(is_admin)
-        return redirect(url_for('user', id=id), code=httplib.SEE_OTHER)
+        return redirect(url_for('user', id=user.id), code=httplib.SEE_OTHER)
     else:
         # TODO: user.delete() kills all sessions. Does this have a side effect
         # for currently active users?
@@ -253,6 +242,7 @@ def update_delete_user(id):
         return redirect(url_for('users'), code=httplib.SEE_OTHER)
 
 
+# TODO: Add authentication
 @app.route("/api/file/<path:filename>")
 # @login_required
 def api_get_file(filename):
@@ -271,7 +261,9 @@ def api_get_file(filename):
 
 
 @app.route("/api/users")
-@admin_required
+# @admin_required
 def api_get_users():
     # TODO: #Different auth handling the API?
-    return ""
+    app.logger.debug(app.config['JSONIFY_MIMETYPE'])
+
+    return jsonify([e.serialize() for e in User.get_all()])

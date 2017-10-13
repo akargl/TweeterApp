@@ -29,7 +29,7 @@ def create_user(username, password, is_admin):
     from models import User
 
     salt, hashed_password = User.create_salt_and_hashed_password(password)
-    User.create(username, salt, hashed_password, True)
+    User.create(username, salt, hashed_password, is_admin)
     print('User created: username: {:s}, password: {:s}, is_admin: {:d}'.format(username, password, is_admin))
 
 
@@ -70,4 +70,9 @@ def insert_db(query, args=()):
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
+        # Clear all active sessions when shutting down the app
+        from models import Session, User
+        users = User.get_all()
+        for u in users:
+            Session.delete_all(u.id)
         db.close()

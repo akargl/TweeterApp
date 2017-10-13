@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import pytest
 from app import app, db, models
@@ -14,7 +15,7 @@ def client():
     with app.app_context():
         db.init_db()
         db.create_user('root', 'root', True)
-        db.create_user('root1', 'root1', False)
+        db.create_user('foo', 'mypassword', False)
         models.Post.create(1, 'My news')
         models.Message.create(2, 1, 'My message', None)
         yield client
@@ -45,8 +46,9 @@ def test_database_cascading(client):
 
     assert len(models.Post.get_posts_by_user_id(u.id)) == 0
 
+# TODO: test if sessions get deleted when shutting down the app
 
-def test_index_pointer_to_login(client):
+def test_unauthenticated_url_points_to_login(client):
     auth_urls = [
         '/',
         '/logout',
@@ -110,6 +112,14 @@ def test_register_no_username(client):
         password='MyPassWord'
     ))
     assert b'Length of username invalid' in response.data
+
+
+def test_register_invalid_username(client):
+    response = client.post('/register', data=dict(
+        username='user/foo',
+        password='MyPassWord'
+    ))
+    assert b'Username must only contain letters, numbers, and underscores' in response.data
 
 
 def test_register_no_password(client):
@@ -204,3 +214,19 @@ def test_api_file_access_png(client):
 def test_api_file_access_symlink(client):
     response = client.get('/api/file/symlink')
     assert response.status_code == 404
+
+
+def test_api_get_users(client):
+    response = client.get('/api/users')
+
+    assert response.content_type == 'application/json'
+    data = json.loads(response.get_data())
+    print data
+    assert len(data) == 2
+    assert data[0]['id'] == 1
+    assert data[0]['username'] == 'root'
+    assert data[0]['is_admin'] == True
+
+    assert data[1]['id'] == 2
+    assert data[1]['username'] == 'foo'
+    assert data[1]['is_admin'] == False

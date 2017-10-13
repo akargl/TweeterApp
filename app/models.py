@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import hashlib
 from hmac import compare_digest
@@ -26,6 +27,25 @@ class User:
         self.id = id
         self.username = username
         self.is_admin = is_admin
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'is_admin': self.is_admin,
+        }
+
+    @staticmethod
+    def verify_credential_policy(username, password):
+        """ Checks against the password policy """
+        errors = []
+        if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
+            errors.append('Length of username invalid. Maximum length: {:d}'.format(User.MAX_USERNAME_LEN))
+        if len(password) < User.MIN_PASSWORD_LEN or len(password) > User.MAX_PASSWORD_LEN:
+            errors.append('Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
+        if not re.match("^[A-Za-z0-9_-]*$", username):
+            errors.append('Username must only contain letters, numbers, and underscores')
+        return errors
 
     @staticmethod
     def get_all():
@@ -186,6 +206,7 @@ class Message:
                     # No file uploaded
                     filename = secure_filename(file.filename)
                     # TODO: file may already exist. maybe compute a random name?
+                    # TODO: Test images via imghdr
                 else:
                     return None
 
@@ -223,7 +244,7 @@ class Session:
         app.logger.debug("Create new session for user {:s}".format(user.username))
         session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
-        result = insert_db('INSERT INTO Sessions (session_token, user_id) Values (?, ?)', [ session_token, user.id])
+        result = insert_db('INSERT INTO Sessions (session_token, user_id) Values (?, ?)', [session_token, user.id])
         return result, session_token
 
     @staticmethod
@@ -233,7 +254,5 @@ class Session:
 
     @staticmethod
     def delete_all(user_id):
-        app.logger.debug("Delete all session for user id {:d}".format( user_id))
+        app.logger.debug("Delete all session for user id {:d}".format(user_id))
         insert_db('DELETE FROM Sessions WHERE user_id = ?', [user_id])
-
-    # TODO: @appp.teardoen -> Delete all sessions
