@@ -206,18 +206,58 @@ def test_send_message_no_params(client):
     assert response.status_code == 400
 
 
+def test_api_no_credentials(client):
+    data = [
+        {},
+        { 'username' : 'foo' },
+        { 'password' : 'password' }
+    ]
+    endpoints = [
+        '/api/file/panda.jpg',
+        '/api/users'
+    ]
+    for e in endpoints:
+        for d in data:
+            response = client.get(e, data=d)
+
+            assert response.status_code == 400
+
+
+def test_api_wrong_credentials(client):
+    data = [
+        { 'username' : 'foo', 'password' : 'root' },
+        { 'username' : 'root', 'password' : 'password' }
+    ]
+    endpoints = [
+        '/api/file/panda.jpg',
+        '/api/users'
+    ]
+    for e in endpoints:
+        for d in data:
+            response = client.get(e, data=d)
+            assert response.status_code == 401
+
+
 def test_api_file_access_png(client):
-    response = client.get('/api/file/panda.png')
+    response = client.get('/api/file/panda.png', data={
+        'username' : 'root',
+        'password' : 'root'
+    })
     assert response.status_code == 200
 
 
 def test_api_file_access_symlink(client):
-    response = client.get('/api/file/symlink')
+    response = client.get('/api/file/symlink', data={
+        'username' : 'root',
+        'password' : 'root'
+    })
     assert response.status_code == 404
 
-
 def test_api_get_users(client):
-    response = client.get('/api/users')
+    response = client.get('/api/users', data={
+        'username' : 'root',
+        'password' : 'root'
+    })
 
     assert response.content_type == 'application/json'
     data = json.loads(response.get_data())
@@ -230,3 +270,11 @@ def test_api_get_users(client):
     assert data[1]['id'] == 2
     assert data[1]['username'] == 'foo'
     assert data[1]['is_admin'] == False
+
+
+def test_api_get_users_no_admin(client):
+    response = client.get('/api/users', data={
+        'username' : 'root1',
+        'password' : 'root1'
+    })
+    assert response.status_code == 401

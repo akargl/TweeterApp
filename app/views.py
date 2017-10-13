@@ -130,8 +130,6 @@ def register():
     else:
         app.logger.debug("Received register request")
         errors = []
-        # TODO: Why is this changed to get? When not providing the request
-        # with the correct form parameters, a 400 Bad Request is rendered
         username = request.form['username']
         password = request.form['password']
 
@@ -242,10 +240,28 @@ def update_delete_user(user):
         return redirect(url_for('users'), code=httplib.SEE_OTHER)
 
 
-# TODO: Add authentication
+def authenticate_api_user(is_admin):
+    username = request.form['username']
+    password = request.form['password']
+
+    salt = User.get_salt(username)
+    if not salt:
+        # User not found
+        abort(httplib.UNAUTHORIZED)
+
+    _, hashed_password = User.create_hashed_password(salt, password)
+
+    user = User.get_and_validate_user(username, hashed_password)
+    if not user:
+        abort(httplib.UNAUTHORIZED)
+    if is_admin and not user.is_admin:
+        abort(httplib.UNAUTHORIZED)
+    return True
+
+
 @app.route("/api/file/<path:filename>")
-# @login_required
 def api_get_file(filename):
+    authenticate_api_user(False)
     # Get absolute path of the file
     upload_folder = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
 
@@ -261,9 +277,7 @@ def api_get_file(filename):
 
 
 @app.route("/api/users")
-# @admin_required
 def api_get_users():
-    # TODO: #Different auth handling the API?
-    app.logger.debug(app.config['JSONIFY_MIMETYPE'])
+    authenticate_api_user(True)
 
     return jsonify([e.serialize() for e in User.get_all()])
