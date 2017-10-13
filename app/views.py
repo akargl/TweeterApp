@@ -4,6 +4,7 @@ from app import app
 from helpers import login_required, admin_required
 from models import Session, User, Post, Message
 from templates import TemplateManager
+import httplib #from http import HTTPStatus
 
 # TODO:
 #
@@ -30,7 +31,6 @@ def index():
     if request.method == 'GET':
         posts = Post.get_posts()
         return TemplateManager.get_index_template(posts)
-        #return render_index()
     else:
         post_content = request.form['post_content']
         # TODO: XSS sanitizing
@@ -39,9 +39,8 @@ def index():
             posts = Post.get_posts()
             return TemplateManager.get_index_template(posts, ["Could not create post"])
 
-        # TODO: Shouldn't this be Post.get_posts_by_user_id(g.user.id) ?
         posts = Post.get_posts()
-        return TemplateManager.get_index_template(posts, [], 201)
+        return TemplateManager.get_index_template(posts, []), httplib.CREATED
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -58,7 +57,7 @@ def login():
         user = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
             # Already logged in
-            return redirect(url_for('index'), code=303)
+            return redirect(url_for('index'), code=httplib.SEE_OTHER)
 
         salt = User.get_salt(username)
         if not salt:
@@ -77,7 +76,7 @@ def login():
 
         # Make the response and set the cookie
         url = url_for(request.args.get('next', 'index'))
-        response = make_response(redirect(url, code=303))
+        response = make_response(redirect(url, code=httplib.SEE_OTHER))
         app.logger.debug("session_token: {:s}".format(session_token))
         response.set_cookie(Session.SESSION_KEY, session_token)
 
@@ -132,7 +131,7 @@ def register():
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)
 
-        return redirect(url_for('login'), code=303)
+        return redirect(url_for('login'), code=httplib.SEE_OTHER)
 
 
 @app.route("/deregister")
@@ -172,7 +171,7 @@ def messages():
         if not status:
             return render_messages('Could not send message')
 
-        return render_messages(), 201
+        return render_messages(), httplib.CREATED
 
 
 @app.route("/messages/<int:id>")
@@ -213,18 +212,18 @@ def get_user(id):
 def update_delete_user(id):
     user = User.get_user_by_id(id)
     if not user:
-        abort(404)
+        abort(httplib.NOT_FOUND)
 
     if request.method == 'PUT':
         # TODO: XSS handling
         is_admin = request.form['is_admin'] == "1"
         user.change_role(is_admin)
-        return redirect(url_for('user', id=id), code=303)
+        return redirect(url_for('user', id=id), code=httplib.SEE_OTHER)
     else:
         # TODO: user.delete() kills all sessions. Does this have a side effect
         # for currently active users?
         user.delete()
-        return redirect(url_for('users'), code=303)
+        return redirect(url_for('users'), code=httplib.SEE_OTHER)
 
 
 @app.route("/api/file/<path:filename>")
@@ -239,7 +238,7 @@ def api_get_file(filename):
     # Don't serve symlinks
     if os.path.islink(abs_filename):
         app.logger.debug("Requested file {:s} is a symlink".format(abs_filename))
-        abort(404)
+        abort(httplib.NOT_FOUND)
 
     return send_from_directory(upload_folder, filename, as_attachment=True)
 
