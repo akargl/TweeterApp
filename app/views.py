@@ -24,6 +24,33 @@ import httplib #from http import HTTPStatus
 # Database:
 # Size limits for database entries
 
+"""
+# Security considerations
+## Password storage/User authentication
+* concatenate password with random salt -> hash it -> store hash and salt in db
+* TODO: use slow/resource intensive hash algo (e.g. scrypt or bcrypt)
+* Sessions: generate random token -> set cookie. User presents cookie with token to authenticate requests
+* TODO: set Httponly flag in session cookie to prevent theft via js
+
+## SQL Injection
+* prepared statements for all sql queries
+
+## XSS Injection
+* escape/sanitize all user generated data before output
+* escaping depends on usage context
+* TODO: Escape before db insertion as well?
+    - Need to specify beforehand in which context the data will/can be used
+    - Double escape on output. We shouldn't rely on all data in the db being already escaped.
+* TODO: safeguard against forgotten output escaping
+
+## CSRF
+* TODO: Check headers to verify request is same origin
+    * Source: Origin or Referer header
+    * Target: Host or X-Forwarded-Host header
+    * Target must be source
+* TODO: second layer (double cookie, extra token,...)
+"""
+
 @app.route("/", methods=['GET', 'POST'])
 @login_required
 def index():
