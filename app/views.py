@@ -23,15 +23,6 @@ from templates import TemplateManager
 # Database:
 # Size limits for database entries
 
-def render_index(errors=[]):
-    posts = Post.get_posts_by_user_id(g.user.id)
-    resp = ""
-    if len(errors):
-        resp + "Errors: " + " ".join(errors)
-    resp += "Content: " + " ".join(p.content for p in posts)
-    return resp
-
-
 @app.route("/", methods=['GET', 'POST'])
 @login_required
 def index():
@@ -47,10 +38,10 @@ def index():
         if not post:
             posts = Post.get_posts()
             return TemplateManager.get_index_template(posts, ["Could not create post"])
-            #return render_index(['Could not create post'])
+
+        # TODO: Shouldn't this be Post.get_posts_by_user_id(g.user.id) ?
         posts = Post.get_posts()
-        return TemplateManager.get_index_template(posts)
-        #return render_index(), 201
+        return TemplateManager.get_index_template(posts, [], 201)
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -113,8 +104,10 @@ def register():
     else:
         app.logger.debug("Received register request")
         errors = []
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # TODO: Why is this changed to get? When not providing the request
+        # with the correct form parameters, a 400 Bad Request is rendered
+        username = request.form['username']
+        password = request.form['password']
 
         app.logger.debug("User: {:s}:{:s}".format(username, password))
 

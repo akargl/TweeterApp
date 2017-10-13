@@ -55,10 +55,10 @@ class TemplateManager(object):
         return main_template
 
     @staticmethod
-    def get_index_template(posts, errors=[]):
+    def get_index_template(posts, errors=[], status_code=200):
         escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
         escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
-        
+
         nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", True), TemplateManager.generate_nav_link("Messages", "messages", False)])
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
@@ -79,7 +79,7 @@ class TemplateManager(object):
 
         main_template = TemplateManager.get_template("main-template", {"main_title" : "Posts", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username})
 
-        return main_template
+        return main_template, status_code
 
     @staticmethod
     def generate_nav_link(text, target, active):
@@ -93,7 +93,7 @@ class TemplateManager(object):
         return Template(raw_template).safe_substitute(substitutions)
 
 #TODO: load dynamically on startup from files in templates/
-    templates = { "main-template" : 
+    templates = { "main-template" :
     """
 <!DOCTYPE html>
 <html lang="en">

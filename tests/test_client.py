@@ -64,7 +64,7 @@ def test_index_pointer_to_login(client):
 
 def test_successful_login(client):
     response = login(client, 'root', 'root')
-    assert b'Content' in response.data
+    assert b'Logged in as root' in response.data
 
 
 def test_wrong_username_login(client):
@@ -150,7 +150,7 @@ def test_post_feed(client):
     login(client, 'root', 'root')
 
     response = client.post('/', data=dict(
-        content='My new Post'
+        post_content='My new Post'
     ))
 
     assert response.status_code == 201
