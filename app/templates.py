@@ -111,6 +111,8 @@ class TemplateManager(object):
 
     <!-- Custom styles for this template -->
     <link href="static/css/starter-template.css" rel="stylesheet">
+
+    <link href="static/css/tweeter.css" rel="stylesheet">
 </head>
 
 <body>
@@ -212,7 +214,7 @@ class TemplateManager(object):
     """
 <div class="card">
     <div class="card-body">
-        <!--<h4 class="card-title">${post_title}</h4>-->
+        <h4 class="card-title">Create new post</h4>
         <h6 class="card-subtitle mb-2 text-muted">Posting as ${username}</h6>
         <form action="${form_target}" method="${form_method}">
             <!-- <div class="form-group">
