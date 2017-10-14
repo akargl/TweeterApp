@@ -65,7 +65,8 @@ def insert_db(query, args=()):
     cur.close()
     return True
 
-
+"""
+#FIXME: this clears all sessions after every request so you can't actually log in. Couldn't find a proper way to handle app termination. Probably better to just clear all remaining sessions on startup or set a expires timestamp alongside in db and clear old ones periodically. Will look into it tomorrow...
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
@@ -76,3 +77,4 @@ def close_connection(exception):
         for u in users:
             Session.delete_all(u.id)
         db.close()
+"""
