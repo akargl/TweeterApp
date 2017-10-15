@@ -30,7 +30,7 @@ from templates import TemplateManager
 * concatenate password with random salt -> hash it -> store hash and salt in db
 * TODO: use slow/resource intensive hash algo (e.g. scrypt or bcrypt)
 * Sessions: generate random token -> set cookie. User presents cookie with token to authenticate requests
-* TODO: set Httponly flag in session cookie to prevent theft via js
+* set Httponly flag in session cookie to prevent theft via js
 
 ## SQL Injection
 * prepared statements for all sql queries
@@ -107,7 +107,7 @@ def login():
         url = url_for(request.args.get('next', 'index'))
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
         app.logger.debug("session_token: {:s}".format(session_token))
-        response.set_cookie(Session.SESSION_KEY, session_token)
+        response.set_cookie(Session.SESSION_KEY, session_token, httponly=True)
 
         return response
 
