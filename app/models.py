@@ -84,14 +84,14 @@ class User:
 
     @staticmethod
     def get_user_by_name(username):
-        user_data = query_db('SELECT * from Users WHERE username = ?', [username], one=True)
+        user_data = query_db('SELECT * from Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
         if user_data is None:
             return None
         return User(user_data['id'], user_data['username'], user_data['is_admin'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
-        user_data = query_db('SELECT * FROM Users WHERE username = ?', [username], one=True)
+        user_data = query_db('SELECT * FROM Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
         if user_data is None:
             return None
         if not User.password_compare(user_data['password_token'], hashed_password):
@@ -101,13 +101,16 @@ class User:
 
     @staticmethod
     def get_salt(username):
-        salt = query_db('SELECT password_salt FROM Users WHERE username = ?', [username], one=True)
+        salt = query_db('SELECT password_salt FROM Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
         if salt is None:
             return None
         return salt['password_salt']
 
     @staticmethod
     def create(username, salt, hashed_password, is_admin=False):
+        #usernames are case insensitive so we need to check first regardless of unique constraint
+        if User.get_user_by_name(username) is not None:
+            return None
         try:
             result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
         except sqlite3.Error as e:

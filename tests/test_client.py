@@ -68,6 +68,10 @@ def test_successful_login(client):
     response = login(client, 'root', 'root')
     assert b'Logged in as root' in response.data
 
+def test_successful_login_case_sensitivity(client):
+    response = login(client, '  ROOT ', 'root')
+    assert b'Logged in as root' in response.data
+
 
 def test_wrong_username_login(client):
     response = login(client, 'foo', 'root')
@@ -101,6 +105,13 @@ def test_register_no_form_data(client):
 def test_register_user_already_exists(client):
     response = client.post('/register', data=dict(
         username='root',
+        password='MyPassWord'
+    ))
+    assert b'User already exists' in response.data
+
+def test_register_user_already_exists_case_sensitivity(client):
+    response = client.post('/register', data=dict(
+        username='ROOT',
         password='MyPassWord'
     ))
     assert b'User already exists' in response.data

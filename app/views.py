@@ -80,6 +80,8 @@ def login():
         password = request.form['password']
         # TODO: XSS sanitizing
 
+        username = username.strip()
+
         app.logger.debug("User: {:s}:{:s}".format(username, password))
         user = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
@@ -133,6 +135,8 @@ def register():
         username = request.form['username']
         password = request.form['password']
 
+        username = username.strip()
+
         app.logger.debug("User: {:s}:{:s}".format(username, password))
 
         # TODO: XSS sanitizing
@@ -145,7 +149,7 @@ def register():
 
         salt, hashed_password = User.create_salt_and_hashed_password(password)
         user = User.create(username, salt, hashed_password)
-        if not user:
+        if user is None:
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)
 
@@ -243,6 +247,8 @@ def update_delete_user(user):
 def authenticate_api_user(is_admin):
     username = request.form['username']
     password = request.form['password']
+
+    username = username.strip()
 
     salt = User.get_salt(username)
     if not salt:
