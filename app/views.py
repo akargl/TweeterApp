@@ -1,9 +1,9 @@
 import os
 import httplib
-from flask import request, redirect, url_for, make_response, g, abort, send_from_directory, jsonify
+from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
 from app import app
-from helpers import login_required, admin_required
-from models import Session, User, Post, Message
+from helpers import authentication_required
+from models import Session, User, Post, Message, FileWrapper
 from templates import TemplateManager
 
 # TODO:
@@ -52,7 +52,7 @@ from templates import TemplateManager
 """
 
 @app.route("/", methods=['GET', 'POST'])
-@login_required
+@authentication_required()
 def index():
     # Post: params[content, file]
     if request.method == 'GET':
@@ -61,7 +61,21 @@ def index():
     else:
         post_content = request.form['post_content']
         # TODO: XSS sanitizing
-        post = Post.create(g.user.id, post_content)
+
+        attachment_name = None
+        if request.files.get('post_attachment'):
+            attachment = request.files['post_attachment']
+            if attachment.filename != '':
+                if not FileWrapper.is_allowed_file(attachment):
+                    posts = Post.get_posts()
+                    return TemplateManager.get_index_template(posts, ["Invalid attachment"])
+                f_wrapper = FileWrapper.create(attachment, False)
+                if f_wrapper is None:
+                    posts = Post.get_posts()
+                    return TemplateManager.get_index_template(posts, ["Invalid attachment"])
+                attachment_name = f_wrapper.get_filename()
+
+        post = Post.create(g.user.id, post_content, attachment_name)
         if not post:
             posts = Post.get_posts()
             return TemplateManager.get_index_template(posts, ["Could not create post"])
@@ -113,7 +127,7 @@ def login():
 
 
 @app.route("/logout")
-@login_required
+@authentication_required()
 def logout():
     Session.delete(g.user.id, g.session_token)
     return redirect(url_for('login'))
@@ -157,7 +171,7 @@ def register():
 
 
 @app.route("/deregister")
-@login_required
+@authentication_required()
 def deregister():
     g.user.delete()
     g.user = None
@@ -174,7 +188,7 @@ def render_messages(error=None):
 
 
 @app.route("/messages", methods=['GET', 'POST'])
-@login_required
+@authentication_required()
 def messages():
     # Post: params[recipient, content, file]
     if request.method == 'GET':
@@ -197,13 +211,13 @@ def messages():
 
 
 @app.route("/messages/<int:id>")
-@login_required
+@authentication_required()
 def message():
     return ""
 
 
 @app.route("/users/")
-@login_required
+@authentication_required()
 def users():
     users = User.get_all()
     return " ".join(u.username for u in users)
@@ -222,7 +236,7 @@ def user(id):
         return update_delete_user(user)
 
 
-@login_required
+@authentication_required()
 def get_user(user):
     posts = Post.get_posts_by_user_id(user.id)
     resp = "User: " + user.username
@@ -230,7 +244,8 @@ def get_user(user):
     return resp
 
 
-@admin_required
+#@admin_required
+@authentication_required(admin=True)
 def update_delete_user(user):
     if request.method == 'PUT':
         # TODO: XSS handling
@@ -243,47 +258,28 @@ def update_delete_user(user):
         user.delete()
         return redirect(url_for('users'), code=httplib.SEE_OTHER)
 
-
-def authenticate_api_user(is_admin):
-    username = request.form['username']
-    password = request.form['password']
-
-    username = username.strip()
-
-    salt = User.get_salt(username)
-    if not salt:
-        # User not found
-        abort(httplib.UNAUTHORIZED)
-
-    _, hashed_password = User.create_hashed_password(salt, password)
-
-    user = User.get_and_validate_user(username, hashed_password)
-    if not user:
-        abort(httplib.UNAUTHORIZED)
-    if is_admin and not user.is_admin:
-        abort(httplib.UNAUTHORIZED)
-    return True
-
-
 @app.route("/api/file/<path:filename>")
+@authentication_required(redirect_to_login=False)
 def api_get_file(filename):
-    authenticate_api_user(False)
-    # Get absolute path of the file
-    upload_folder = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
 
-    abs_filename = os.path.join(upload_folder, filename)
-    app.logger.debug("Requested file {:s}".format(abs_filename))
+    f_wrapper = FileWrapper.get_by_filename(filename)
+    if f_wrapper is None:
+        return abort(httplib.NOT_FOUND)
+    storage_path = f_wrapper.get_storagepath()
+
+    app.logger.debug("Requested file {:s}".format(storage_path))
 
     # Don't serve symlinks
-    if os.path.islink(abs_filename):
-        app.logger.debug("Requested file {:s} is a symlink".format(abs_filename))
-        abort(httplib.NOT_FOUND)
+    if os.path.islink(storage_path):
+        app.logger.debug("Requested file {:s} is a symlink".format(storage_path))
+        abort(httplib.FORBIDDEN)
 
-    return send_from_directory(upload_folder, filename, as_attachment=True)
+    return send_file(storage_path)
 
 
 @app.route("/api/users")
+@authentication_required(admin=True, redirect_to_login=False)
 def api_get_users():
-    authenticate_api_user(True)
+    #authenticate_api_user(True)
 
     return jsonify([e.serialize() for e in User.get_all()])

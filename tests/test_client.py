@@ -3,6 +3,7 @@ import json
 import tempfile
 import pytest
 from app import app, db, models
+from werkzeug.datastructures import FileStorage
 
 
 @pytest.fixture
@@ -18,6 +19,11 @@ def client():
         db.create_user('foo', 'mypassword', False)
         models.Post.create(1, 'My news')
         models.Message.create(2, 1, 'My message', None)
+        panda_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], "panda.png")
+        panda_file = None
+        fp = open(panda_path, 'rb')
+        panda_file = FileStorage(fp)
+        models.FileWrapper.create(panda_file, False)
         yield client
 
     os.close(db_fd)
@@ -231,7 +237,7 @@ def test_api_no_credentials(client):
         for d in data:
             response = client.get(e, data=d)
 
-            assert response.status_code == 400
+            assert response.status_code == 401
 
 
 def test_api_wrong_credentials(client):
@@ -250,7 +256,7 @@ def test_api_wrong_credentials(client):
 
 
 def test_api_file_access_png(client):
-    response = client.get('/api/file/panda.png', data={
+    response = client.get('/api/file/1.png', data={
         'username' : 'root',
         'password' : 'root'
     })

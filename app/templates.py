@@ -1,6 +1,7 @@
 from string import Template
 from flask import url_for, g
 from models import User
+from app import app
 
 class TemplateManager(object):
     #TODO: add escaping mathods for other contexts as needed
@@ -63,7 +64,8 @@ class TemplateManager(object):
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
-        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index')})
+        max_attachment_size = str(app.config['MAX_ATTACHMENT_LENGTH']/1024/1024) + "mb"
+        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size})
 
         posts_content = ""
         for p in posts:
@@ -71,7 +73,8 @@ class TemplateManager(object):
             author_user = User.get_user_by_id(p.author_id)
             author_name = author_user.username if author_user is not None else "[Deleted]"
             escaped_author_name = TemplateManager.escape_for_html_element_context(author_name)
-            post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content})
+            post_image_src = "/api/file/{:s}".format(p.attachment_name) if p.attachment_name else ""
+            post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content, "post_image_src" : post_image_src, "post_image_display" : "" if p.attachment_name else "none"})
             posts_content += post_content + "\n"
 
 
@@ -202,6 +205,9 @@ class TemplateManager(object):
     "post-template" :
     """
 <div class="card">
+    <a href="${post_image_src}" style="display: ${post_image_display};">
+        <img class="card-img-top" src="${post_image_src}" style="max-height: 300px; object-fit: contain;">
+    </a>
     <div class="card-body">
         <!--<h4 class="card-title">${post_title}</h4>-->
         <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author}</h6>
@@ -216,7 +222,7 @@ class TemplateManager(object):
     <div class="card-body">
         <h4 class="card-title">Create new post</h4>
         <h6 class="card-subtitle mb-2 text-muted">Posting as ${username}</h6>
-        <form action="${form_target}" method="${form_method}">
+        <form action="${form_target}" method="${form_method}" enctype="multipart/form-data">
             <!-- <div class="form-group">
                 <label for="post_title">Post title</label>
                 <input type="text" class="form-control" id="post_title" name="post_title" placeholder="">
@@ -225,10 +231,11 @@ class TemplateManager(object):
 			    <label for="post_content">Your post</label>
 			    <textarea class="form-control" id="post_content" name="post_content" rows="3"></textarea>
 			</div>
-			<!-- <div class="form-group">
+			<div class="form-group">
 			    <label for="post_attachment">Attachment</label>
-			    <input type="file" class="form-control-file" id="post_attachment" name="post_attachment">
-		  	</div> -->
+			    <input type="file" class="form-control-file" id="post_attachment" name="post_attachment" aria-describedby="attachmentHelp">
+                <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}</small>
+		  	</div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
     </div>

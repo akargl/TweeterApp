@@ -5,9 +5,9 @@ import hashlib
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
-from helpers import allowed_file
 from db import query_db, insert_db
 from app import app
+from os import path
 
 
 class User:
@@ -140,16 +140,17 @@ class Post:
     # int id (Primary key)
     # int author_id -> User.id
     # str Content
-    def __init__(self, author_id, content):
+    def __init__(self, author_id, content, attachment_name=None):
         self.author_id = author_id
         self.content = content
+        self.attachment_name = attachment_name
 
     @staticmethod
     def get_posts_by_user_id(user_id):
         result = query_db('SELECT * from Posts WHERE author_id = ?', [user_id])
         posts = []
         for r in result:
-            posts.append(Post(r['author_id'], r['content']))
+            posts.append(Post(r['author_id'], r['content'], r['attachment_name']))
         return posts
 
     @staticmethod
@@ -157,7 +158,7 @@ class Post:
         result = query_db('SELECT * from Posts')
         posts = []
         for r in result:
-            posts.append(Post(r['author_id'], r['content']))
+            posts.append(Post(r['author_id'], r['content'], r['attachment_name']))
         return posts
 
     @staticmethod
@@ -165,13 +166,13 @@ class Post:
         result = query_db('SELECT * from Posts LIMIT ?', (amount,))
         posts = []
         for r in result:
-            posts.append(Post(r['author_id'], r['content']))
+            posts.append(Post(r['author_id'], r['content'], r['attachment_name']))
         return posts
 
     @staticmethod
-    def create(author_id, content):
+    def create(author_id, content, attachment_name=None):
         try:
-            result = insert_db('INSERT into Posts (author_id, content) VALUES (?, ?)', [author_id, content])
+            result = insert_db('INSERT into Posts (author_id, content, attachment_name) VALUES (?, ?, ?)', [author_id, content, attachment_name])
         except sqlite3.Error as e:
             app.logger.debug('sqlite3 error ' + e.message)
             return None
@@ -205,7 +206,7 @@ class Message:
         try:
             filename = ""
             if file and file.filename != "":
-                if allowed_file(file.filename):
+                if FileWrapper.is_allowed_file(file):
                     # No file uploaded
                     filename = secure_filename(file.filename)
                     # TODO: file may already exist. maybe compute a random name?
@@ -259,3 +260,75 @@ class Session:
     def delete_all(user_id):
         app.logger.debug("Delete all session for user id {:d}".format(user_id))
         insert_db('DELETE FROM Sessions WHERE user_id = ?', [user_id])
+
+
+class FileWrapper:
+    FILENAME_LENGTH = 32
+
+    def __init__(self, fileId, extension, private, permittedUserIds):
+        self.fileId = fileId
+        self.extension = extension
+        self.private = bool(private)
+        self.permittedUserIds = permittedUserIds
+
+    def get_filename(self):
+        return str(self.fileId) + self.extension
+
+    def get_storagepath(self):
+        return os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], self.get_filename())
+    
+    @staticmethod
+    def get_by_id(fileId):
+        file_data = query_db('SELECT * from Files WHERE id = ?', [fileId], one=True)
+        if not file_data:
+            return None
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
+        if f_wrapper.private:
+            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [fileId])
+            for p in p_data:
+                f_wrapper.permittedUserIds.append(p['userId'])
+        return f_wrapper
+
+    @staticmethod
+    def get_by_filename(filename):
+        file_data = query_db('SELECT * from Files WHERE id || extension = ?', [filename], one=True)
+        if not file_data:
+            return None
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
+        if f_wrapper.private:
+            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [file_data['id']])
+            for p in p_data:
+                f_wrapper.permittedUserIds.append(p['userId'])
+        return f_wrapper
+    
+    @staticmethod
+    def is_allowed_file(file_):
+        f_ext = path.splitext(file_.filename)[1]
+        app.logger.debug("f_ext is" + f_ext)
+        if f_ext.lower() not in app.config['ALLOWED_EXTENSIONS']:
+            return False
+        #TODO: check with imghdr
+        return True
+    
+    @staticmethod
+    def create(file_, private, permittedUserIds=[]):
+        private = bool(private)
+        if not FileWrapper.is_allowed_file(file_):
+            return None
+        f_ext = path.splitext(file_.filename)[1]
+        try:
+            fileId = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
+        except sqlite3.Error as e:
+            app.logger.debug('sqlite3 error while creating file in db:' + e.message)
+            return None
+        if not fileId:
+            return None
+        if private:
+            for userId in permittedUserIds:
+                insert_db('INSERT into FilePermissions (fileId, userId) VALUES (?, ?)', [fileId, userId])
+        f_wrapper = FileWrapper(fileId, f_ext, private, permittedUserIds)
+        storage_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], f_wrapper.get_filename())
+        app.logger.debug("Saving attachment to {:s}".format(storage_path))
+        file_.save(storage_path)
+        return f_wrapper
+

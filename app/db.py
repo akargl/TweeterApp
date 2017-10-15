@@ -62,8 +62,9 @@ def insert_db(query, args=()):
     # TODO: Exception handling?
     cur = get_db().execute(query, args)
     get_db().commit()
+    lastId = cur.lastrowid
     cur.close()
-    return True
+    return lastId
 
 """
 #FIXME: this clears all sessions after every request so you can't actually log in. Couldn't find a proper way to handle app termination. Probably better to just clear all remaining sessions on startup or set a expires timestamp alongside in db and clear old ones periodically. Will look into it tomorrow...

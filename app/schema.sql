@@ -14,7 +14,8 @@ CREATE TABLE `Sessions` (
 CREATE TABLE `Posts` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`author_id` REFERENCES Users(id) ON DELETE CASCADE,
-	`content`	TEXT
+	`content`	TEXT,
+	`attachment_name`	TEXT
 );
 CREATE TABLE `Messages` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -22,5 +23,15 @@ CREATE TABLE `Messages` (
 	`recipient_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`content`	TEXT,
 	`filename`	TEXT
+);
+CREATE TABLE `Files` (
+	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	`extension`	TEXT NOT NULL,
+	`private`	INTEGER
+);
+CREATE TABLE `FilePermissions` (
+	`fileId`	REFERENCES Files(id) ON DELETE CASCADE,
+	`userId`	REFERENCES Users(id) ON DELETE CASCADE,
+	PRIMARY KEY(fileId,userId)
 );
 COMMIT;
