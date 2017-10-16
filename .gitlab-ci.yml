@@ -4,5 +4,8 @@ before_script:
   - pip install -r requirements.txt
 
 test:
-  script:
-  - pytest
+    script:
+        - pip install coverage
+        - coverage run --source app -m pytest
+        - coverage report
+    coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
