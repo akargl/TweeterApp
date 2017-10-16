@@ -73,7 +73,7 @@ class TemplateManager(object):
             author_user = User.get_user_by_id(p.author_id)
             author_name = author_user.username if author_user is not None else "[Deleted]"
             escaped_author_name = TemplateManager.escape_for_html_element_context(author_name)
-            post_image_src = "/api/file/{:s}".format(p.attachment_name) if p.attachment_name else ""
+            post_image_src = "/api/files/{:s}".format(p.attachment_name) if p.attachment_name else ""
             post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content, "post_image_src" : post_image_src, "post_image_display" : "" if p.attachment_name else "none"})
             posts_content += post_content + "\n"
 

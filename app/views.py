@@ -259,7 +259,7 @@ def update_delete_user(user):
         return redirect(url_for('users'), code=httplib.SEE_OTHER)
 
 
-@app.route("/api/file/<path:filename>")
+@app.route("/api/files/<path:filename>")
 @authentication_required(redirect_to_login=False)
 def api_get_file(filename):
 

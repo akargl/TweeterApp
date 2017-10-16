@@ -207,7 +207,7 @@ def test_post_content_and_file(client):
 
     assert response.status_code == 201
     assert b'My new Post' in response.data
-    assert b'/api/file/1.png' in response.data
+    assert b'/api/files/1.png' in response.data
 
 
 def test_post_twice_same_data(client):
@@ -224,8 +224,8 @@ def test_post_twice_same_data(client):
 
     assert response.status_code == 201
     assert response.data.count('My new Post') == 2
-    assert b'/api/file/1.png' in response.data
-    assert b'/api/file/2.png' in response.data
+    assert b'/api/files/1.png' in response.data
+    assert b'/api/files/2.png' in response.data
 
 
 def test_post_no_content_given(client):
@@ -274,7 +274,7 @@ def test_api_no_credentials(client):
         { 'password' : 'password' }
     ]
     endpoints = [
-        '/api/file/panda.jpg',
+        '/api/files/panda.jpg',
         '/api/users'
     ]
     for e in endpoints:
@@ -290,7 +290,7 @@ def test_api_wrong_credentials(client):
         { 'username' : 'root', 'password' : 'password' }
     ]
     endpoints = [
-        '/api/file/panda.jpg',
+        '/api/files/panda.jpg',
         '/api/users'
     ]
     for e in endpoints:
@@ -302,7 +302,7 @@ def test_api_wrong_credentials(client):
 def test_api_file_access_png(client):
     upload_file("panda.png")
 
-    response = client.get('/api/file/1.png', data={
+    response = client.get('/api/files/1.png', data={
         'username' : 'root',
         'password' : 'root'
     })
@@ -311,7 +311,7 @@ def test_api_file_access_png(client):
 
 def test_api_file_access_symlink(client):
     # TODO: Remove that, since we check if the file is a symlink when uploading
-    response = client.get('/api/file/symlink', data={
+    response = client.get('/api/files/symlink', data={
         'username' : 'root',
         'password' : 'root'
     })
