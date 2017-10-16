@@ -2,15 +2,19 @@ import os
 import json
 import tempfile
 import pytest
+from StringIO import StringIO
 from app import app, db, models
 from werkzeug.datastructures import FileStorage
+
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.fixture
 def client():
     db_fd, app.config['DATABASE'] = tempfile.mkstemp()
     app.config['TESTING'] = True
-    app.config['UPLOAD_FOLDER'] = "upload_fixtures"
+    app.config['UPLOAD_FOLDER'] = os.path.join(dir_path, tempfile.mkdtemp())
     client = app.test_client()
 
     with app.app_context():
@@ -19,15 +23,24 @@ def client():
         db.create_user('foo', 'mypassword', False)
         models.Post.create(1, 'My news')
         models.Message.create(2, 1, 'My message', None)
-        panda_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], "panda.png")
-        panda_file = None
-        fp = open(panda_path, 'rb')
-        panda_file = FileStorage(fp)
-        models.FileWrapper.create(panda_file, False)
+
         yield client
 
     os.close(db_fd)
     os.unlink(app.config['DATABASE'])
+
+def read_file(filename):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    with open(os.path.join(dir_path, filename)) as f:
+        return StringIO(f.read())
+
+
+def upload_file(filename):
+    panda_path = os.path.join(dir_path, "test_data", filename)
+    with open(panda_path, 'rb') as f:
+        panda_file = FileStorage(f)
+        models.FileWrapper.create(panda_file, False)
 
 
 def login(client, username, password):
@@ -52,7 +65,6 @@ def test_database_cascading(client):
 
     assert len(models.Post.get_posts_by_user_id(u.id)) == 0
 
-# TODO: test if sessions get deleted when shutting down the app
 
 def test_unauthenticated_url_points_to_login(client):
     auth_urls = [
@@ -114,6 +126,7 @@ def test_register_user_already_exists(client):
         password='MyPassWord'
     ))
     assert b'User already exists' in response.data
+
 
 def test_register_user_already_exists_case_sensitivity(client):
     response = client.post('/register', data=dict(
@@ -182,6 +195,37 @@ def test_post_feed(client):
 
     assert response.status_code == 201
     assert b'My new Post' in response.data
+
+
+def test_post_content_and_file(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        {'post_attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        post_content='My new Post'
+    ))
+
+    assert response.status_code == 201
+    assert b'My new Post' in response.data
+    assert b'/api/file/1.png' in response.data
+
+
+def test_post_twice_same_data(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        {'post_attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        post_content='My new Post'
+    ))
+    response = client.post('/', data=dict(
+        {'post_attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        post_content='My new Post'
+    ))
+
+    assert response.status_code == 201
+    assert response.data.count('My new Post') == 2
+    assert b'/api/file/1.png' in response.data
+    assert b'/api/file/2.png' in response.data
 
 
 def test_post_no_content_given(client):
@@ -256,6 +300,8 @@ def test_api_wrong_credentials(client):
 
 
 def test_api_file_access_png(client):
+    upload_file("panda.png")
+
     response = client.get('/api/file/1.png', data={
         'username' : 'root',
         'password' : 'root'
@@ -264,11 +310,13 @@ def test_api_file_access_png(client):
 
 
 def test_api_file_access_symlink(client):
+    # TODO: Remove that, since we check if the file is a symlink when uploading
     response = client.get('/api/file/symlink', data={
         'username' : 'root',
         'password' : 'root'
     })
     assert response.status_code == 404
+
 
 def test_api_get_users(client):
     response = client.get('/api/users', data={
