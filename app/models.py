@@ -3,6 +3,7 @@ import re
 import sqlite3
 import hashlib
 import time
+import imghdr
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
@@ -302,7 +303,12 @@ class FileWrapper:
         app.logger.debug("f_ext is" + f_ext)
         if f_ext.lower() not in app.config['ALLOWED_EXTENSIONS']:
             return False
-        #TODO: check with imghdr
+        
+        file_.seek(0)
+        imghdr_type = imghdr.what(None, file_.read())
+        if "." + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
+            return False
+        file_.seek(0)
         return True
 
     @staticmethod
