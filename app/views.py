@@ -62,22 +62,23 @@ def index():
         post_content = request.form['post_content']
         # TODO: XSS sanitizing
 
+        posts = Post.get_posts()
+
         attachment_name = None
         if request.files.get('post_attachment'):
             attachment = request.files['post_attachment']
             if attachment.filename != '':
                 if not FileWrapper.is_allowed_file(attachment):
-                    posts = Post.get_posts()
                     return TemplateManager.get_index_template(posts, ["Invalid attachment"])
                 f_wrapper = FileWrapper.create(attachment, False)
                 if f_wrapper is None:
-                    posts = Post.get_posts()
                     return TemplateManager.get_index_template(posts, ["Invalid attachment"])
                 attachment_name = f_wrapper.get_filename()
 
+        if post_content.strip() == "" and attachment_name is None:
+            return TemplateManager.get_index_template(posts, ["Post can't be empty"])
         post = Post.create(g.user.id, post_content, attachment_name)
         if not post:
-            posts = Post.get_posts()
             return TemplateManager.get_index_template(posts, ["Could not create post"])
 
         posts = Post.get_posts()
