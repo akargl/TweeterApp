@@ -228,6 +228,17 @@ def test_post_twice_same_data(client):
     assert b'/api/files/2.png' in response.data
 
 
+def test_post_wrong_file_format(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        {'post_attachment': (StringIO('my file'), 'panda.png')},
+        post_content='My new Post'
+    ))
+    assert response.status_code == 200
+    assert b'Invalid attachment' in response.data
+
+
 def test_post_no_content_given(client):
     login(client, 'root', 'root')
 

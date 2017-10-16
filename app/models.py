@@ -303,7 +303,7 @@ class FileWrapper:
         app.logger.debug("f_ext is" + f_ext)
         if f_ext.lower() not in app.config['ALLOWED_EXTENSIONS']:
             return False
-        
+
         file_.seek(0)
         imghdr_type = imghdr.what(None, file_.read())
         if "." + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
