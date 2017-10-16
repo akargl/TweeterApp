@@ -64,7 +64,7 @@ class TemplateManager(object):
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
-        max_attachment_size = str(app.config['MAX_ATTACHMENT_LENGTH']/1024/1024) + "mb"
+        max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
         post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size})
 
         posts_content = ""
