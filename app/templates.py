@@ -231,12 +231,16 @@ class TemplateManager(object):
 			    <label for="post_content">Your post</label>
 			    <textarea class="form-control" id="post_content" name="post_content" rows="3"></textarea>
 			</div>
-			<div class="form-group">
-			    <label for="post_attachment">Attachment</label>
-			    <input type="file" class="form-control-file" id="post_attachment" name="post_attachment" aria-describedby="attachmentHelp">
-                <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}</small>
-		  	</div>
-            <button type="submit" class="btn btn-primary">Submit</button>
+            <div class="form-row align-items-center">
+                <div class="col-auto">
+                    <label for="post_attachment">Attachment</label>
+                    <input type="file" class="form-control-file" id="post_attachment" name="post_attachment" aria-describedby="attachmentHelp">
+                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}</small>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
         </form>
     </div>
 </div>
