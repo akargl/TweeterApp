@@ -249,14 +249,14 @@ def test_send_message(client):
     login(client, 'root', 'root')
 
     response = client.post('/messages', data=dict(
-        recipient_id=2,
-        content="My new message"
+        message_recipient="foo",
+        message_content="My new message"
     ))
 
     assert response.status_code == 201
-    messages = models.Message.get_messages_by_user_id(2)
-    assert len(messages) == 1
-    assert messages[0].content == 'My new message'
+    messages = models.Message.get_messages_for_user_id(2)
+    assert len(messages) == 2
+    assert messages[1].content == 'My new message'
 
 
 def test_send_message_no_params(client):

@@ -2,6 +2,7 @@ from string import Template
 from flask import url_for, g
 from models import User
 from app import app
+import datetime
 
 class TemplateManager(object):
     #TODO: add escaping mathods for other contexts as needed
@@ -60,12 +61,12 @@ class TemplateManager(object):
         escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
         escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
 
-        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", True), TemplateManager.generate_nav_link("Messages", "messages", False)])
+        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", active=True), TemplateManager.generate_nav_link("Messages", "messages")])
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
-        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size})
+        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS'])})
 
         posts_content = ""
         for p in posts:
@@ -73,8 +74,9 @@ class TemplateManager(object):
             author_user = User.get_user_by_id(p.author_id)
             author_name = author_user.username if author_user is not None else "[Deleted]"
             escaped_author_name = TemplateManager.escape_for_html_element_context(author_name)
-            post_image_src = "/api/files/{:s}".format(p.attachment_name) if p.attachment_name else ""
-            post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content, "post_image_src" : post_image_src, "post_image_display" : "" if p.attachment_name else "none"})
+            app.logger.debug(p.attachment_name)
+            post_image_src = "/api/files/{:s}".format(p.attachment_name) if p.attachment_name is not None else ""
+            post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content, "post_image_src" : post_image_src, "post_image_display" : "" if p.attachment_name else "none", "post_time" : datetime.datetime.fromtimestamp(p.timestamp)})
             posts_content += post_content + "\n"
 
 
@@ -84,8 +86,44 @@ class TemplateManager(object):
 
         return main_template
 
+
     @staticmethod
-    def generate_nav_link(text, target, active):
+    def get_messages_template(messages, errors=[]):
+        escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
+        escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
+
+        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/"), TemplateManager.generate_nav_link("Messages", "messages", active=True)])
+
+        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
+
+        max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
+        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS'])})
+
+        messages_content = ""
+        for m in messages:
+            escaped_content = TemplateManager.escape_for_html_element_context(m.content)
+
+            author_user = User.get_user_by_id(m.author_id)
+            author_name = author_user.username if author_user is not None else "[Deleted]"
+            escaped_author_name = TemplateManager.escape_for_html_element_context(author_name)
+
+            recipient_user = User.get_user_by_id(m.recipient_id)
+            recipient_name = recipient_user.username if recipient_user is not None else "[Deleted]"
+            escaped_recipient_name = TemplateManager.escape_for_html_element_context(recipient_name)
+
+            message_image_src = "/api/files/{:s}".format(m.filename) if m.filename else ""
+            message_content = TemplateManager.get_template("message-template", {"message_author" : escaped_author_name, "message_recipient" : escaped_recipient_name, "message_text" : escaped_content, "message_image_src" : message_image_src, "message_image_display" : "" if m.filename else "none", "message_time" : datetime.datetime.fromtimestamp(m.timestamp)})
+            messages_content += message_content + "\n"
+
+
+        main_content = alerts + message_form + messages_content
+
+        main_template = TemplateManager.get_template("main-template", {"main_title" : "Messages", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username})
+
+        return main_template
+
+    @staticmethod
+    def generate_nav_link(text, target, active=False):
         return TemplateManager.get_template("nav-link-template", {"nav_target" : target, "nav_text" : text, "nav_active" : "active" if active else ""})
 
     @staticmethod
@@ -210,8 +248,22 @@ class TemplateManager(object):
     </a>
     <div class="card-body">
         <!--<h4 class="card-title">${post_title}</h4>-->
-        <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author}</h6>
+        <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author} at ${post_time}</h6>
         <p class="card-text">${post_text}</p>
+    </div>
+</div>
+    """,
+
+    "message-template" :
+    """
+<div class="card">
+    <a href="${message_image_src}" style="display: ${message_image_display};">
+        <img class="card-img-top" src="${message_image_src}" style="max-height: 300px; object-fit: contain;">
+    </a>
+    <div class="card-body">
+        <!--<h4 class="card-title">${message_title}</h4>-->
+        <h6 class="card-subtitle mb-2 text-muted">Sent by ${message_author} to ${message_recipient} at ${message_time}</h6>
+        <p class="card-text">${message_text}</p>
     </div>
 </div>
     """,
@@ -235,7 +287,41 @@ class TemplateManager(object):
                 <div class="col-auto">
                     <label for="post_attachment">Attachment</label>
                     <input type="file" class="form-control-file" id="post_attachment" name="post_attachment" aria-describedby="attachmentHelp">
-                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}</small>
+                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}. Only ${permitted_filetypes} files.</small>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+    """,
+
+    "message-form-template" :
+    """
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title">Send a message</h4>
+        <h6 class="card-subtitle mb-2 text-muted">Send from ${username}</h6>
+        <form action="${form_target}" method="${form_method}" enctype="multipart/form-data">
+            <!-- <div class="form-group">
+                <label for="post_title">Post title</label>
+                <input type="text" class="form-control" id="post_title" name="post_title" placeholder="">
+            </div> -->
+            <div class="form-group">
+                <label for="message_recipient">Recipient</label>
+                <input type="text" class="form-control" id="message_recipient" name="message_recipient" placeholder="">
+            </div>
+            <div class="form-group">
+			    <label for="message_content">Your message</label>
+			    <textarea class="form-control" id="message_content" name="message_content" rows="3"></textarea>
+			</div>
+            <div class="form-row align-items-center">
+                <div class="col-auto">
+                    <label for="message_attachment">Attachment</label>
+                    <input type="file" class="form-control-file" id="message_attachment" name="message_attachment" aria-describedby="attachmentHelp">
+                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}. Only ${permitted_filetypes} files.</small>
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary">Submit</button>

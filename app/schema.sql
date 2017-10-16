@@ -15,14 +15,16 @@ CREATE TABLE `Posts` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`author_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`content`	TEXT,
-	`attachment_name`	TEXT
+	`attachment_name`	TEXT,
+	`timestamp`	INTEGER
 );
 CREATE TABLE `Messages` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`author_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`recipient_id` REFERENCES Users(id) ON DELETE CASCADE,
 	`content`	TEXT,
-	`filename`	TEXT
+	`filename`	TEXT,
+	`timestamp`	INTEGER
 );
 CREATE TABLE `Files` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,

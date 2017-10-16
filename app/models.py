@@ -2,6 +2,7 @@ import os
 import re
 import sqlite3
 import hashlib
+import time
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
@@ -140,17 +141,18 @@ class Post:
     # int id (Primary key)
     # int author_id -> User.id
     # str Content
-    def __init__(self, author_id, content, attachment_name=None):
+    def __init__(self, author_id, content, attachment_name, timestamp):
         self.author_id = author_id
         self.content = content
         self.attachment_name = attachment_name
+        self.timestamp = timestamp
 
     @staticmethod
     def get_posts_by_user_id(user_id):
         result = query_db('SELECT * from Posts WHERE author_id = ?', [user_id])
         posts = []
         for r in result:
-            posts.append(Post(r['author_id'], r['content'], r['attachment_name']))
+            posts.append(Post(r['author_id'], r['content'], r['attachment_name'], r['timestamp']))
         return posts
 
     @staticmethod
@@ -158,7 +160,7 @@ class Post:
         result = query_db('SELECT * from Posts')
         posts = []
         for r in result:
-            posts.append(Post(r['author_id'], r['content'], r['attachment_name']))
+            posts.append(Post(r['author_id'], r['content'], r['attachment_name'], r['timestamp']))
         return posts
 
     @staticmethod
@@ -166,13 +168,13 @@ class Post:
         result = query_db('SELECT * from Posts LIMIT ?', (amount,))
         posts = []
         for r in result:
-            posts.append(Post(r['author_id'], r['content'], r['attachment_name']))
+            posts.append(Post(r['author_id'], r['content'], r['attachment_name'], r['timestamp']))
         return posts
 
     @staticmethod
     def create(author_id, content, attachment_name=None):
         try:
-            result = insert_db('INSERT into Posts (author_id, content, attachment_name) VALUES (?, ?, ?)', [author_id, content, attachment_name])
+            result = insert_db('INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [author_id, content, attachment_name, int(time.time())])
         except sqlite3.Error as e:
             app.logger.debug('sqlite3 error ' + e.message)
             return None
@@ -187,42 +189,29 @@ class Message:
     # int recipient_id -> User.id
     # str Content
     # str filename
-    def __init__(self, author_id, recipient_id, content, filename):
+    def __init__(self, author_id, recipient_id, content, filename, timestamp):
         self.author_id = author_id
         self.recipient_id = recipient_id
         self.content = content
         self.filename = filename
+        self.timestamp = timestamp
 
     @staticmethod
-    def get_messages_by_user_id(user_id):
-        result = query_db('SELECT * from Messages WHERE recipient_id = ?', [user_id])
+    def get_messages_for_user_id(user_id):
+        result = query_db('SELECT * from Messages WHERE recipient_id = ? OR author_id = ?', [user_id, user_id])
         messages = []
         for r in result:
-            messages.append(Message(r['author_id'], r['recipient_id'], r['content'], r['filename']))
+            messages.append(Message(r['author_id'], r['recipient_id'], r['content'], r['filename'], r['timestamp']))
         return messages
 
     @staticmethod
-    def create(author_id, recipient_id, content, file):
+    def create(author_id, recipient_id, content, filename=None):
         try:
-            filename = ""
-            if file and file.filename != "":
-                if FileWrapper.is_allowed_file(file):
-                    # No file uploaded
-                    filename = secure_filename(file.filename)
-                    # TODO: file may already exist. maybe compute a random name?
-                    # TODO: Test images via imghdr
-                else:
-                    return None
-
-            result = insert_db('INSERT INTO Messages (author_id, recipient_id, content, filename) VALUES (?, ?, ?, ?)', [author_id, recipient_id, content, filename])
-            if not result:
-                return None
-
-            # Save file to disk
-            if filename != "":
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [author_id, recipient_id, content, filename, int(time.time())])
         except sqlite3.Error as e:
             app.logger.debug('sqlite3 error ' + e.message)
+            return None
+        if not result:
             return None
         return True
 

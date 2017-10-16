@@ -180,7 +180,7 @@ def deregister():
 
 
 def render_messages(error=None):
-    messages = Message.get_messages_by_user_id(g.user.id)
+    messages = Message.get_messages_for_user_id(g.user.id)
     resp = ""
     if error:
         resp = "Error: " + error
@@ -193,29 +193,43 @@ def render_messages(error=None):
 def messages():
     # Post: params[recipient, content, file]
     if request.method == 'GET':
-        return render_messages()
+        messages = Message.get_messages_for_user_id(g.user.id)
+        return TemplateManager.get_messages_template(messages)
+        #return render_messages()
     else:
-        recipient_id = int(request.form['recipient_id'])
-        content = request.form['content']
-        file = request.files.get('file', None)
-        # TODO: XSS handling
-        recipient = User.get_user_by_id(recipient_id)
-        if not recipient:
-            # Invalid recipient
-            return render_messages('Invalid recipient')
+        message_content = request.form['message_content']
+        recipient_name = request.form['message_recipient'].strip()
 
-        status = Message.create(g.user.id, recipient_id, content, file)
-        if not status:
-            return render_messages('Could not send message')
+        messages = Message.get_messages_for_user_id(g.user.id)
 
-        return render_messages(), httplib.CREATED
+        recipient = User.get_user_by_name(recipient_name)
+        if recipient is None:
+            return TemplateManager.get_messages_template(messages, ["Unknown recipient"])
 
+        attachment_name = None
+        if request.files.get('message_attachment'):
+            attachment = request.files['message_attachment']
+            if attachment.filename != '':
+                if not FileWrapper.is_allowed_file(attachment):
+                    return TemplateManager.get_messages_template(messages, ["Invalid attachment"])
+                f_wrapper = FileWrapper.create(attachment, False)
+                if f_wrapper is None:
+                    return TemplateManager.get_messages_template(messages, ["Invalid attachment"])
+                attachment_name = f_wrapper.get_filename()
+
+        if message_content.strip() == "" and attachment_name is None:
+            return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
+        message = Message.create(g.user.id, recipient.id ,message_content, attachment_name)
+        if not message:
+            return TemplateManager.get_messages_template(messages, ["Could not create message"])
+
+        messages = Message.get_messages_for_user_id(g.user.id)
+        return TemplateManager.get_messages_template(messages), httplib.CREATED
 
 @app.route("/messages/<int:id>")
 @authentication_required()
 def message():
     return ""
-
 
 @app.route("/users/")
 @authentication_required()
