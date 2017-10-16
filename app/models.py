@@ -236,6 +236,12 @@ class Session:
     TOKEN_LENGTH = 32
 
     @staticmethod
+    def clear():
+        users = User.get_all()
+        for u in users:
+            Session.delete_all(u.id)
+
+    @staticmethod
     def active_user(session_token):
         app.logger.debug("Get active user")
         user_id = query_db('SELECT user_id from Sessions WHERE session_token = ?', [session_token], one=True)
@@ -276,7 +282,7 @@ class FileWrapper:
 
     def get_storagepath(self):
         return os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], self.get_filename())
-    
+
     @staticmethod
     def get_by_id(fileId):
         file_data = query_db('SELECT * from Files WHERE id = ?', [fileId], one=True)
@@ -300,7 +306,7 @@ class FileWrapper:
             for p in p_data:
                 f_wrapper.permittedUserIds.append(p['userId'])
         return f_wrapper
-    
+
     @staticmethod
     def is_allowed_file(file_):
         f_ext = path.splitext(file_.filename)[1]
@@ -309,7 +315,7 @@ class FileWrapper:
             return False
         #TODO: check with imghdr
         return True
-    
+
     @staticmethod
     def create(file_, private, permittedUserIds=[]):
         private = bool(private)
@@ -331,4 +337,3 @@ class FileWrapper:
         app.logger.debug("Saving attachment to {:s}".format(storage_path))
         file_.save(storage_path)
         return f_wrapper
-

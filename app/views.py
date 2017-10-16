@@ -245,7 +245,6 @@ def get_user(user):
     return resp
 
 
-#@admin_required
 @authentication_required(admin=True)
 def update_delete_user(user):
     if request.method == 'PUT':
@@ -258,6 +257,7 @@ def update_delete_user(user):
         # for currently active users?
         user.delete()
         return redirect(url_for('users'), code=httplib.SEE_OTHER)
+
 
 @app.route("/api/file/<path:filename>")
 @authentication_required(redirect_to_login=False)
@@ -281,6 +281,4 @@ def api_get_file(filename):
 @app.route("/api/users")
 @authentication_required(admin=True, redirect_to_login=False)
 def api_get_users():
-    #authenticate_api_user(True)
-
     return jsonify([e.serialize() for e in User.get_all()])

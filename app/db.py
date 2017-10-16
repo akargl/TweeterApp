@@ -66,16 +66,15 @@ def insert_db(query, args=()):
     cur.close()
     return lastId
 
-"""
-#FIXME: this clears all sessions after every request so you can't actually log in. Couldn't find a proper way to handle app termination. Probably better to just clear all remaining sessions on startup or set a expires timestamp alongside in db and clear old ones periodically. Will look into it tomorrow...
+
+@app.before_first_request
+def clear_sessions():
+    from models import Session
+    Session.clear()
+
+
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
-        # Clear all active sessions when shutting down the app
-        from models import Session, User
-        users = User.get_all()
-        for u in users:
-            Session.delete_all(u.id)
         db.close()
-"""
