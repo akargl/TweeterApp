@@ -51,20 +51,26 @@ def initdb_command():
 
 
 def query_db(query, args=(), one=False):
-    # TODO: Exception handling?
-    cur = get_db().execute(query, args)
-    rv = cur.fetchall()
-    cur.close()
-    return (rv[0] if rv else None) if one else rv
+    try:
+        cur = get_db().execute(query, args)
+        rv = cur.fetchall()
+        cur.close()
+        return (rv[0] if rv else None) if one else rv
+    except sqlite3.Error as e:
+        app.logger.debug('sqlite3 error ' + e.message)
+        return None
 
 
 def insert_db(query, args=()):
-    # TODO: Exception handling?
-    cur = get_db().execute(query, args)
-    get_db().commit()
-    lastId = cur.lastrowid
-    cur.close()
-    return lastId
+    try:
+        cur = get_db().execute(query, args)
+        get_db().commit()
+        lastId = cur.lastrowid
+        cur.close()
+        return lastId
+    except sqlite3.Error as e:
+        app.logger.debug('sqlite3 error ' + e.message)
+        return None
 
 
 @app.before_first_request

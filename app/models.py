@@ -100,7 +100,6 @@ class User:
             return None
         return User(user_data['id'], user_data['username'], user_data['is_admin'])
 
-
     @staticmethod
     def get_salt(username):
         salt = query_db('SELECT password_salt FROM Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
@@ -113,11 +112,7 @@ class User:
         #usernames are case insensitive so we need to check first regardless of unique constraint
         if User.get_user_by_name(username) is not None:
             return None
-        try:
-            result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
-        except sqlite3.Error as e:
-            app.logger.debug('sqlite3 error ' + e.message)
-            return None
+        result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
         if not result:
             return None
         return User.get_user_by_name(username)
@@ -131,11 +126,9 @@ class User:
         if self.is_admin == is_admin:
             # Value does not change, nothing to do
             return
-        try:
-            insert_db('UPDATE Users SET is_admin = ? WHERE id = ?', [int(is_admin), self.id])
-            self.is_admin = is_admin
-        except sqlite3.Error as e:
-            app.logger.debug('sqlite3 error ' + e.message)
+        insert_db('UPDATE Users SET is_admin = ? WHERE id = ?', [int(is_admin), self.id])
+        self.is_admin = is_admin
+        # TODO: return code
 
 
 class Post:
@@ -174,11 +167,7 @@ class Post:
 
     @staticmethod
     def create(author_id, content, attachment_name=None):
-        try:
-            result = insert_db('INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [author_id, content, attachment_name, int(time.time())])
-        except sqlite3.Error as e:
-            app.logger.debug('sqlite3 error ' + e.message)
-            return None
+        result = insert_db('INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [author_id, content, attachment_name, int(time.time())])
         if not result:
             return None
         return True
@@ -207,11 +196,7 @@ class Message:
 
     @staticmethod
     def create(author_id, recipient_id, content, filename=None):
-        try:
-            result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [author_id, recipient_id, content, filename, int(time.time())])
-        except sqlite3.Error as e:
-            app.logger.debug('sqlite3 error ' + e.message)
-            return None
+        result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [author_id, recipient_id, content, filename, int(time.time())])
         if not result:
             return None
         return True
@@ -350,15 +335,12 @@ class FileWrapper:
         if not FileWrapper.is_allowed_file(file_):
             return None
         f_ext = path.splitext(file_.filename)[1]
-        try:
-            file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
-        except sqlite3.Error as e:
-            app.logger.debug('sqlite3 error while creating file in db:' + e.message)
-            return None
+        file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
         if not file_id:
             return None
         if private:
             for user_id in permittedUserIds:
+                # TODO: error handling?
                 insert_db('INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [file_id, user_id])
         f_wrapper = FileWrapper(file_id, f_ext, private, permittedUserIds)
         storage_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], f_wrapper.get_filename())
