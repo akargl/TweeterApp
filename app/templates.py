@@ -285,8 +285,8 @@ class TemplateManager(object):
 			</div>
             <div class="form-row align-items-center">
                 <div class="col-auto">
-                    <label for="post_attachment">Attachment</label>
-                    <input type="file" class="form-control-file" id="post_attachment" name="post_attachment" aria-describedby="attachmentHelp">
+                    <label for="attachment">Attachment</label>
+                    <input type="file" class="form-control-file" id="attachment" name="attachment" aria-describedby="attachmentHelp">
                     <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}. Only ${permitted_filetypes} files.</small>
                 </div>
                 <div class="col-auto">
@@ -319,8 +319,8 @@ class TemplateManager(object):
 			</div>
             <div class="form-row align-items-center">
                 <div class="col-auto">
-                    <label for="message_attachment">Attachment</label>
-                    <input type="file" class="form-control-file" id="message_attachment" name="message_attachment" aria-describedby="attachmentHelp">
+                    <label for="attachment">Attachment</label>
+                    <input type="file" class="form-control-file" id="attachment" name="attachment" aria-describedby="attachmentHelp">
                     <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}. Only ${permitted_filetypes} files.</small>
                 </div>
                 <div class="col-auto">

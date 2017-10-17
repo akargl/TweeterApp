@@ -201,7 +201,7 @@ def test_post_content_and_file(client):
     login(client, 'root', 'root')
 
     response = client.post('/', data=dict(
-        {'post_attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        {'attachment': (read_file('test_data/panda.png'), 'panda.png')},
         post_content='My new Post'
     ))
 
@@ -214,11 +214,11 @@ def test_post_twice_same_data(client):
     login(client, 'root', 'root')
 
     response = client.post('/', data=dict(
-        {'post_attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        {'attachment': (read_file('test_data/panda.png'), 'panda.png')},
         post_content='My new Post'
     ))
     response = client.post('/', data=dict(
-        {'post_attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        {'attachment': (read_file('test_data/panda.png'), 'panda.png')},
         post_content='My new Post'
     ))
 
@@ -232,7 +232,7 @@ def test_post_wrong_file_format(client):
     login(client, 'root', 'root')
 
     response = client.post('/', data=dict(
-        {'post_attachment': (StringIO('my file'), 'panda.png')},
+        {'attachment': (StringIO('my file'), 'panda.png')},
         post_content='My new Post'
     ))
     assert response.status_code == 200
@@ -278,20 +278,20 @@ def test_send_message_no_params(client):
     assert response.status_code == 400
 
 
-def test_api_no_credentials(client):
+def test_api_unauthorized(client):
     data = [
         {},
         { 'username' : 'foo' },
         { 'password' : 'password' }
     ]
     endpoints = [
+        '/api/files',
         '/api/files/panda.jpg',
         '/api/users'
     ]
     for e in endpoints:
         for d in data:
             response = client.get(e, data=d)
-
             assert response.status_code == 401
 
 
@@ -301,6 +301,7 @@ def test_api_wrong_credentials(client):
         { 'username' : 'root', 'password' : 'password' }
     ]
     endpoints = [
+        '/api/users',
         '/api/files/panda.jpg',
         '/api/users'
     ]
@@ -310,7 +311,21 @@ def test_api_wrong_credentials(client):
             assert response.status_code == 401
 
 
+def test_api_get_files(client):
+    upload_file("panda.png")
+
+    response = client.get('/api/files', data={
+        'username' : 'root',
+        'password' : 'root'
+    })
+
+    assert response.content_type == 'application/json'
+    data = json.loads(response.get_data())
+    assert len(data) == 1
+
+
 def test_api_file_access_png(client):
+    # TODO: Access all valid files
     upload_file("panda.png")
 
     response = client.get('/api/files/1.png', data={

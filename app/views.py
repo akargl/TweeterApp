@@ -61,26 +61,18 @@ def index():
     else:
         post_content = request.form['post_content']
         # TODO: XSS sanitizing
-
         posts = Post.get_posts()
 
-        attachment_name = None
-        if request.files.get('post_attachment'):
-            attachment = request.files['post_attachment']
-            if attachment.filename != '':
-                if not FileWrapper.is_allowed_file(attachment):
-                    return TemplateManager.get_index_template(posts, ["Invalid attachment"])
-                f_wrapper = FileWrapper.create(attachment, False)
-                if f_wrapper is None:
-                    return TemplateManager.get_index_template(posts, ["Invalid attachment"])
-                attachment_name = f_wrapper.get_filename()
-
+        attachment_name, errors = FileWrapper.is_valid_filename(request.files.get('attachment'))
+        if len(errors):
+            return TemplateManager.get_index_template(posts, errors)
         if post_content.strip() == "" and attachment_name is None:
             return TemplateManager.get_index_template(posts, ["Post can't be empty"])
         post = Post.create(g.user.id, post_content, attachment_name)
         if not post:
             return TemplateManager.get_index_template(posts, ["Could not create post"])
 
+        # Get new posts
         posts = Post.get_posts()
         return TemplateManager.get_index_template(posts, []), httplib.CREATED
 
@@ -195,7 +187,6 @@ def messages():
     if request.method == 'GET':
         messages = Message.get_messages_for_user_id(g.user.id)
         return TemplateManager.get_messages_template(messages)
-        #return render_messages()
     else:
         message_content = request.form['message_content']
         recipient_name = request.form['message_recipient'].strip()
@@ -206,17 +197,9 @@ def messages():
         if recipient is None:
             return TemplateManager.get_messages_template(messages, ["Unknown recipient"])
 
-        attachment_name = None
-        if request.files.get('message_attachment'):
-            attachment = request.files['message_attachment']
-            if attachment.filename != '':
-                if not FileWrapper.is_allowed_file(attachment):
-                    return TemplateManager.get_messages_template(messages, ["Invalid attachment"])
-                f_wrapper = FileWrapper.create(attachment, False)
-                if f_wrapper is None:
-                    return TemplateManager.get_messages_template(messages, ["Invalid attachment"])
-                attachment_name = f_wrapper.get_filename()
-
+        attachment_name, errors = FileWrapper.is_valid_filename(request.files.get('attachment'))
+        if len(errors):
+            return TemplateManager.get_messages_template(messages, errors)
         if message_content.strip() == "" and attachment_name is None:
             return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
         message = Message.create(g.user.id, recipient.id ,message_content, attachment_name)
@@ -225,6 +208,7 @@ def messages():
 
         messages = Message.get_messages_for_user_id(g.user.id)
         return TemplateManager.get_messages_template(messages), httplib.CREATED
+
 
 @app.route("/messages/<int:id>")
 @authentication_required()
@@ -273,10 +257,18 @@ def update_delete_user(user):
         return redirect(url_for('users'), code=httplib.SEE_OTHER)
 
 
+@app.route("/api/files")
+@authentication_required(redirect_to_login=False)
+def api_files():
+    """ Get a json list of all accessible files """
+    files = FileWrapper.get_public_files()
+    # TODO: private files
+    return jsonify([f.serialize() for f in files])
+
+
 @app.route("/api/files/<path:filename>")
 @authentication_required(redirect_to_login=False)
 def api_get_file(filename):
-
     f_wrapper = FileWrapper.get_by_filename(filename)
     if f_wrapper is None:
         return abort(httplib.NOT_FOUND)

@@ -261,41 +261,36 @@ class Session:
 class FileWrapper:
     FILENAME_LENGTH = 32
 
-    def __init__(self, fileId, extension, private, permittedUserIds):
-        self.fileId = fileId
+    def __init__(self, file_id, extension, private, permittedUserIds):
+        self.file_id = file_id
         self.extension = extension
         self.private = bool(private)
         self.permittedUserIds = permittedUserIds
 
     def get_filename(self):
-        return str(self.fileId) + self.extension
+        return str(self.file_id) + self.extension
 
     def get_storagepath(self):
         return os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], self.get_filename())
 
-    @staticmethod
-    def get_by_id(fileId):
-        file_data = query_db('SELECT * from Files WHERE id = ?', [fileId], one=True)
-        if not file_data:
-            return None
-        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
-        if f_wrapper.private:
-            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [fileId])
-            for p in p_data:
-                f_wrapper.permittedUserIds.append(p['userId'])
-        return f_wrapper
+    def serialize(self):
+        return {
+            'id': self.file_id
+        }
 
     @staticmethod
-    def get_by_filename(filename):
-        file_data = query_db('SELECT * from Files WHERE id || extension = ?', [filename], one=True)
-        if not file_data:
-            return None
-        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
-        if f_wrapper.private:
-            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [file_data['id']])
-            for p in p_data:
-                f_wrapper.permittedUserIds.append(p['userId'])
-        return f_wrapper
+    def is_valid_filename(file):
+        if file:
+            if file.filename != '':
+                if not FileWrapper.is_allowed_file(file):
+                    return None, ["Invalid attachment"]
+                # TODO: This code fragment smells. We have a static method that
+                # internally creates a temporary object to get the filename
+                f_wrapper = FileWrapper.create(file, False)
+                if f_wrapper is None:
+                    return None, ["Invalid attachment"]
+                return f_wrapper.get_filename(), []
+        return None, []
 
     @staticmethod
     def is_allowed_file(file_):
@@ -312,22 +307,60 @@ class FileWrapper:
         return True
 
     @staticmethod
+    def get_public_files():
+        file_data = query_db('SELECT * from Files WHERE private = 0')
+        if not file_data:
+            return []
+        files = []
+        for f in file_data:
+            wrapper = FileWrapper(f['id'], f['extension'], f['private'], [])
+            if wrapper.private:
+                # Not allowed to get private files when querying public data
+                return []
+            files.append(wrapper)
+        return files
+
+    @staticmethod
+    def get_by_id(file_id):
+        file_data = query_db('SELECT * from Files WHERE id = ?', [file_id], one=True)
+        if not file_data:
+            return None
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
+        if f_wrapper.private:
+            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [file_id])
+            for p in p_data:
+                f_wrapper.permittedUserIds.append(p['user_id'])
+        return f_wrapper
+
+    @staticmethod
+    def get_by_filename(filename):
+        file_data = query_db('SELECT * from Files WHERE id || extension = ?', [filename], one=True)
+        if not file_data:
+            return None
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
+        if f_wrapper.private:
+            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [file_data['id']])
+            for p in p_data:
+                f_wrapper.permittedUserIds.append(p['user_id'])
+        return f_wrapper
+
+    @staticmethod
     def create(file_, private, permittedUserIds=[]):
         private = bool(private)
         if not FileWrapper.is_allowed_file(file_):
             return None
         f_ext = path.splitext(file_.filename)[1]
         try:
-            fileId = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
+            file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
         except sqlite3.Error as e:
             app.logger.debug('sqlite3 error while creating file in db:' + e.message)
             return None
-        if not fileId:
+        if not file_id:
             return None
         if private:
-            for userId in permittedUserIds:
-                insert_db('INSERT into FilePermissions (fileId, userId) VALUES (?, ?)', [fileId, userId])
-        f_wrapper = FileWrapper(fileId, f_ext, private, permittedUserIds)
+            for user_id in permittedUserIds:
+                insert_db('INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [file_id, user_id])
+        f_wrapper = FileWrapper(file_id, f_ext, private, permittedUserIds)
         storage_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], f_wrapper.get_filename())
         app.logger.debug("Saving attachment to {:s}".format(storage_path))
         file_.save(storage_path)

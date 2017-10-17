@@ -32,8 +32,8 @@ CREATE TABLE `Files` (
 	`private`	INTEGER
 );
 CREATE TABLE `FilePermissions` (
-	`fileId`	REFERENCES Files(id) ON DELETE CASCADE,
-	`userId`	REFERENCES Users(id) ON DELETE CASCADE,
-	PRIMARY KEY(fileId,userId)
+	`file_id`	REFERENCES Files(id) ON DELETE CASCADE,
+	`user_id`	REFERENCES Users(id) ON DELETE CASCADE,
+	PRIMARY KEY(file_id,user_id)
 );
 COMMIT;
