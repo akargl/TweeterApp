@@ -246,8 +246,7 @@ def update_delete_user(user):
 @authentication_required(redirect_to_login=False)
 def api_files():
     """ Get a json list of all accessible files """
-    files = FileWrapper.get_public_files()
-    # TODO: private files
+    files = FileWrapper.get_files(g.user.id)
     return jsonify([f.serialize() for f in files])
 
 

@@ -292,10 +292,11 @@ class FileWrapper:
         return True
 
     @staticmethod
-    def get_public_files():
-        file_data = query_db('SELECT * from Files WHERE private = 0')
+    def get_files(user_id):
+        file_data = query_db('SELECT * FROM Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE ((permission.user_id = ? and file.private = 1) or file.private=0)', [user_id])
         if not file_data:
             return []
+
         files = []
         for f in file_data:
             wrapper = FileWrapper(f['id'], f['extension'], f['private'], [])
