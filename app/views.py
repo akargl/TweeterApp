@@ -171,15 +171,6 @@ def deregister():
     return redirect(url_for('login'))
 
 
-def render_messages(error=None):
-    messages = Message.get_messages_for_user_id(g.user.id)
-    resp = ""
-    if error:
-        resp = "Error: " + error
-    resp += "Messages: " + " ".join(m.content for m in messages)
-    return resp
-
-
 @app.route("/messages", methods=['GET', 'POST'])
 @authentication_required()
 def messages():

@@ -86,6 +86,7 @@ def test_successful_login(client):
     response = login(client, 'root', 'root')
     assert b'Logged in as root' in response.data
 
+
 def test_successful_login_case_sensitivity(client):
     response = login(client, '  ROOT ', 'root')
     assert b'Logged in as root' in response.data
@@ -197,6 +198,17 @@ def test_post_feed(client):
     assert b'My new Post' in response.data
 
 
+def test_post_feed_no_content(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        post_content=""
+    ))
+
+    assert response.status_code == 200
+    assert b"Post can&#x27;t be empty" in response.data
+
+
 def test_post_content_and_file(client):
     login(client, 'root', 'root')
 
@@ -276,6 +288,30 @@ def test_send_message_no_params(client):
     response = client.post('/messages')
 
     assert response.status_code == 400
+
+
+def test_send_message_unknown_recipient(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages', data=dict(
+        message_recipient="fo1o",
+        message_content="My new message"
+    ))
+
+    assert response.status_code == 200
+    assert b'Unknown recipient' in response.data
+
+
+def test_send_message_no_content(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages', data=dict(
+        message_recipient="foo",
+        message_content=""
+    ))
+
+    assert response.status_code == 200
+    assert b"Message can&#x27;t be empty" in response.data
 
 
 def test_api_unauthorized(client):
