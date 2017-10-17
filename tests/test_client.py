@@ -29,6 +29,7 @@ def client():
     os.close(db_fd)
     os.unlink(app.config['DATABASE'])
 
+
 def read_file(filename):
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -72,7 +73,6 @@ def test_unauthenticated_url_points_to_login(client):
         '/logout',
         '/deregister',
         '/messages',
-        '/messages/1',
         '/users',
         '/users/1',
     ]
@@ -87,19 +87,32 @@ def test_successful_login(client):
     assert b'Logged in as root' in response.data
 
 
+def test_already_logged_in(client):
+    login(client, 'root', 'root')
+    response = login(client, 'root', 'root')
+    assert response.status_code == 200
+    assert b'Logged in as root' in response.data
+
+
 def test_successful_login_case_sensitivity(client):
     response = login(client, '  ROOT ', 'root')
     assert b'Logged in as root' in response.data
 
 
 def test_wrong_username_login(client):
-    response = login(client, 'foo', 'root')
+    response = login(client, 'foobar', 'root')
     assert b'Invalid Login or password.' in response.data
 
 
 def test_wrong_password_login(client):
     response = login(client, 'root', 'bar')
     assert b'Invalid Login or password.' in response.data
+
+
+def test_logut(client):
+    login(client, 'root', 'root')
+    response = client.get('/logout', follow_redirects=True)
+    assert b'Login' in response.data
 
 
 def test_get_register(client):
@@ -159,6 +172,17 @@ def test_register_no_password(client):
         password=''
     ))
     assert b'Invalid password length' in response.data
+
+
+def test_register_already_logged_in(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/register', data=dict(
+        username='myuser',
+        password='MyPassWord'
+    ), follow_redirects=True)
+    assert b'Logged in as root' in response.data
+    assert models.User.get_user_by_name('myuser') == None
 
 
 def test_register_too_short_password(client):

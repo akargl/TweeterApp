@@ -88,7 +88,6 @@ def login():
         # TODO: XSS sanitizing
 
         username = username.strip()
-
         app.logger.debug("User: {:s}:{:s}".format(username, password))
         user = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
@@ -200,11 +199,6 @@ def messages():
         messages = Message.get_messages_for_user_id(g.user.id)
         return TemplateManager.get_messages_template(messages), httplib.CREATED
 
-
-@app.route("/messages/<int:id>")
-@authentication_required()
-def message():
-    return ""
 
 @app.route("/users/")
 @authentication_required()
