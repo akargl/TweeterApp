@@ -39,7 +39,6 @@ class TemplateManager(object):
 
         return main_template
 
-
     @staticmethod
     def get_login_template(errors=[]):
         escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
