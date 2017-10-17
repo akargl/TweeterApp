@@ -28,8 +28,7 @@ CREATE TABLE `Messages` (
 );
 CREATE TABLE `Files` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
-	`extension`	TEXT NOT NULL,
-	`private`	INTEGER
+	`extension`	TEXT NOT NULL
 );
 CREATE TABLE `FilePermissions` (
 	`file_id`	REFERENCES Files(id) ON DELETE CASCADE,
