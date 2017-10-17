@@ -6,6 +6,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Coverage
+.coverage
+htmlcov/
+
 # C extensions
 *.so
 
