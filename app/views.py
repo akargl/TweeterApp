@@ -200,6 +200,13 @@ def messages():
         return TemplateManager.get_messages_template(messages), httplib.CREATED
 
 
+@app.route("/administration", methods=['GET'])
+@authentication_required(admin=True)
+def administration():
+    users = User.get_all()
+    return TemplateManager.get_administration_template(users, [])
+
+
 @app.route("/users/")
 @authentication_required()
 def users():
@@ -235,7 +242,7 @@ def update_delete_user(user):
         is_admin = request.form['is_admin'] == "1"
         user.change_role(is_admin)
         return redirect(url_for('user', id=user.id), code=httplib.SEE_OTHER)
-    else:
+    elif request.method == 'DELETE':
         # TODO: user.delete() kills all sessions. Does this have a side effect
         # for currently active users?
         user.delete()

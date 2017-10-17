@@ -29,7 +29,8 @@ class TemplateManager(object):
 
         register_template = TemplateManager.get_template("register-template", {"form_target" : url_for('register'), "form_method" : "POST"})
 
-        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
+        nav_links = ""
+        #nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
@@ -45,7 +46,8 @@ class TemplateManager(object):
 
         login_template = TemplateManager.get_template("login-template", {"form_target" : url_for('login'), "form_method" : "POST"})
 
-        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
+        nav_links = ""
+        #nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
@@ -61,6 +63,8 @@ class TemplateManager(object):
         escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
 
         nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", active=True), TemplateManager.generate_nav_link("Messages", "messages")])
+        if g.user.is_admin:
+            nav_links += TemplateManager.generate_nav_link("Administration", "administration")
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
@@ -92,6 +96,8 @@ class TemplateManager(object):
         escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
 
         nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/"), TemplateManager.generate_nav_link("Messages", "messages", active=True)])
+        if g.user.is_admin:
+            nav_links += TemplateManager.generate_nav_link("Administration", "administration")
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
@@ -118,6 +124,27 @@ class TemplateManager(object):
         main_content = alerts + message_form + messages_content
 
         main_template = TemplateManager.get_template("main-template", {"main_title" : "Messages", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username})
+
+        return main_template
+
+    @staticmethod
+    def get_administration_template(users, errors):
+        escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
+        escaped_username = TemplateManager.escape_for_html_element_context(g.user.username)
+
+        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/"), TemplateManager.generate_nav_link("Messages", "messages"), TemplateManager.generate_nav_link("Administration", "administration", active=True)])
+
+        alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
+
+        user_list_group = ""
+        for u in users:
+            user_list_group += TemplateManager.get_template("administration-user-template", {"user_name" : TemplateManager.escape_for_html_element_context(u.username), "group_badges" : TemplateManager.get_template("administration-user-group-badge", {"group_name" : "Admin"}) if u.is_admin else "", "user_id" : u.id})
+
+        admin_main = TemplateManager.get_template("administration-main-template", {"user_list_group" : user_list_group})
+
+        main_content = alerts + admin_main
+
+        main_template = TemplateManager.get_template("main-template", {"main_title" : "Administration", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username})
 
         return main_template
 
@@ -153,6 +180,8 @@ class TemplateManager(object):
     <link href="static/css/starter-template.css" rel="stylesheet">
 
     <link href="static/css/tweeter.css" rel="stylesheet">
+
+    <script src="static/js/tweeter.js"></script>
 </head>
 
 <body>
@@ -330,6 +359,39 @@ class TemplateManager(object):
     </div>
 </div>
     """,
+
+    "administration-main-template" : 
+    """
+<h1>Administration</h1>
+<ul class="list-group">
+    ${user_list_group}
+</ul>
+    """,
+
+    "administration-user-template" :
+    """
+<li class="list-group-item">
+    <div class="row">
+        <div class="col">
+            ${user_name} ${group_badges}
+        </div>
+        <div class="col"> 
+            <button type="button" class="btn btn-primary btn-sm" onclick="administrationPromotionClickHandler(${user_id});">
+                Promote to admin
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="administrationDeletionClickHandler(${user_id});">
+                Delete user
+            </button>
+        </div>
+    </div>
+</li>
+    """,
+
+    "administration-user-group-badge" :
+    """
+<span class="badge badge-primary">${group_name}</span>
+    """,
+    
 
     "alert-template" :
     """
