@@ -227,46 +227,23 @@ def administration():
     return TemplateManager.get_administration_template(users, [])
 
 
-@app.route("/users/")
-@authentication_required()
-def users():
-    users = User.get_all()
-    return " ".join(u.username for u in users)
-
-
-@app.route("/users/<int:id>", methods=['GET', 'PUT', 'DELETE'])
+@app.route("/users/<int:id>", methods=['PUT', 'DELETE'])
+@authentication_required(admin=True)
 def user(id):
     app.logger.debug("Request " + request.method)
     user = User.get_user_by_id(id)
     if not user:
         abort(httplib.NOT_FOUND)
 
-    if request.method == 'GET':
-        return get_user(user)
-    else:
-        return update_delete_user(user)
-
-
-@authentication_required()
-def get_user(user):
-    posts = Post.get_posts_by_user_id(user.id)
-    resp = "User: " + user.username
-    resp += " Content " + " ".join(p.content for p in posts)
-    return resp
-
-
-@authentication_required(admin=True)
-def update_delete_user(user):
     if request.method == 'PUT':
         # TODO: XSS handling
         is_admin = request.form['is_admin'] == "1"
         user.change_role(is_admin)
-        return redirect(url_for('user', id=user.id), code=httplib.SEE_OTHER)
     elif request.method == 'DELETE':
         # TODO: user.delete() kills all sessions. Does this have a side effect
         # for currently active users?
         user.delete()
-        return redirect(url_for('users'), code=httplib.SEE_OTHER)
+    return httplib.NO_CONTENT
 
 
 @app.route("/api/files")

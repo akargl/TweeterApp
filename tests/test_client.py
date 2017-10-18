@@ -72,9 +72,7 @@ def test_unauthenticated_url_points_to_login(client):
         '/',
         '/logout',
         '/deregister',
-        '/messages',
-        '/users',
-        '/users/1',
+        '/messages'
     ]
 
     for url in auth_urls:
