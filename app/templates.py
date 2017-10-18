@@ -204,8 +204,12 @@ class TemplateManager(object):
                         Logged in as ${username}
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                        <a class="dropdown-item" href="logout">Logout</a>
-                        <a class="dropdown-item" href="deregister">Delete my account</a>
+                        <a class="dropdown-item" href="#" onclick="document.getElementById('logoutForm').submit();">
+                            <form id="logoutForm" action="logout" method="POST"></form>Logout
+                        </a>
+                        <a class="dropdown-item" href="#" onclick="document.getElementById('deregisterForm').submit();">
+                            <form id="deregisterForm" action="deregister" method="POST"></form>Delete my account
+                        </a>
                     </div>
                 </li>
             </ul>

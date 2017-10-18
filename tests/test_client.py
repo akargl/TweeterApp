@@ -74,15 +74,23 @@ def test_database_cascading(client):
 
 
 def test_unauthenticated_url_points_to_login(client):
-    auth_urls = [
+    auth_urls_get = [
         '/',
-        '/logout',
-        '/deregister',
-        '/messages'
+        '/messages',
+        '/administration'
     ]
 
-    for url in auth_urls:
+    for url in auth_urls_get:
         response = client.get(url, follow_redirects=True)
+        assert b'Login' in response.data
+
+    auth_urls_post = [
+        '/logout',
+        '/deregister'
+    ]
+
+    for url in auth_urls_post:
+        response = client.post(url, follow_redirects=True)
         assert b'Login' in response.data
 
 
@@ -113,9 +121,9 @@ def test_wrong_password_login(client):
     assert b'Invalid Login or password.' in response.data
 
 
-def test_logut(client):
+def test_logout(client):
     login(client, 'root', 'root')
-    response = client.get('/logout', follow_redirects=True)
+    response = client.post('/logout', follow_redirects=True)
     assert b'Login' in response.data
 
 
@@ -200,7 +208,7 @@ def test_register_too_short_password(client):
 def test_deregister(client):
     login(client, 'root', 'root')
 
-    response = client.get('/deregister')
+    response = client.post('/deregister')
 
     assert response.status_code == 302
     assert models.User.get_user_by_name('root') is None

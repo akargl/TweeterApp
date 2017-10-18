@@ -128,7 +128,7 @@ def login():
         return response
 
 
-@app.route("/logout")
+@app.route("/logout", methods=['POST'])
 @authentication_required()
 def logout():
     Session.delete(g.user.id, g.session_token)
@@ -172,7 +172,7 @@ def register():
         return redirect(url_for('login'), code=httplib.SEE_OTHER)
 
 
-@app.route("/deregister")
+@app.route("/deregister", methods=['POST'])
 @authentication_required()
 def deregister():
     g.user.delete()
