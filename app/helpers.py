@@ -2,19 +2,27 @@ import httplib
 from functools import wraps
 from flask import g, request, redirect, url_for, abort
 from models import Session, User
+from app import app
 
 
 def user_from_credentials():
-    username = request.form.get('username')
-    password = request.form.get('password')
+    auth = request.authorization
+    if not auth:
+        return None
+    username = auth.username
+    password = auth.password
 
     if username is None or password is None:
         return None
+
+    app.logger.debug('Find User from credentials: username: {:s}, PW: {:s}'.format(username, password))
 
     username = username.strip()
     salt = User.get_salt(username)
     if not salt:
         return None
+
+    app.logger.debug('Found salt for user')
 
     _, hashed_password = User.create_hashed_password(salt, password)
     user = User.get_and_validate_user(username, hashed_password)
@@ -29,6 +37,7 @@ def user_from_session():
 def get_user():
     session_user = user_from_session()
     if session_user is not None:
+        app.logger.debug("Session found for '" + session_user.username + "'")
         return session_user
     credentials_user = user_from_credentials()
     return credentials_user

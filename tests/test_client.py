@@ -3,6 +3,7 @@ import json
 import tempfile
 import pytest
 from StringIO import StringIO
+from base64 import b64encode
 from app import app, db, models
 from werkzeug.datastructures import FileStorage
 
@@ -14,6 +15,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 def client():
     db_fd, app.config['DATABASE'] = tempfile.mkstemp()
     app.config['TESTING'] = True
+    app.config['DEBUG'] = True
     app.config['UPLOAD_FOLDER'] = os.path.join(dir_path, tempfile.mkdtemp())
     client = app.test_client()
 
@@ -53,6 +55,10 @@ def login(client, username, password):
 
 def logout(client):
     return client.get('/logout', follow_redirects=True)
+
+
+def http_basic_headers(username, password):
+    return { 'Authorization' : 'Basic ' + b64encode("{:s}:{:s}".format(username, password)) }
 
 
 def test_database_cascading(client):
@@ -353,6 +359,17 @@ def test_api_unauthorized(client):
             assert response.status_code == 401
 
 
+def test_api_no_headers(client):
+    endpoints = [
+        '/api/users',
+        '/api/files/panda.jpg',
+        '/api/users'
+    ]
+    for e in endpoints:
+        response = client.get(e)
+        assert response.status_code == 401
+
+
 def test_api_wrong_credentials(client):
     data = [
         { 'username' : 'foo', 'password' : 'root' },
@@ -365,18 +382,16 @@ def test_api_wrong_credentials(client):
     ]
     for e in endpoints:
         for d in data:
-            response = client.get(e, data=d)
+            response = client.get(e, headers=http_basic_headers(d['username'], d['password']))
             assert response.status_code == 401
 
 
 def test_api_get_files(client):
     upload_file("panda.png")
 
-    response = client.get('/api/files', data={
-        'username' : 'root',
-        'password' : 'root'
-    })
+    response = client.get('/api/files', headers=http_basic_headers('root', 'root'))
 
+    assert response.status_code == 200
     assert response.content_type == 'application/json'
     data = json.loads(response.get_data())
     assert len(data) == 1
@@ -386,28 +401,20 @@ def test_api_file_access_png(client):
     # TODO: Access all valid files
     upload_file("panda.png")
 
-    response = client.get('/api/files/1.png', data={
-        'username' : 'root',
-        'password' : 'root'
-    })
+    response = client.get('/api/files/1.png', headers=http_basic_headers('root', 'root'))
     assert response.status_code == 200
 
 
 def test_api_file_access_symlink(client):
     # TODO: Remove that, since we check if the file is a symlink when uploading
-    response = client.get('/api/files/symlink', data={
-        'username' : 'root',
-        'password' : 'root'
-    })
+    response = client.get('/api/files/symlink', headers=http_basic_headers('root', 'root'))
     assert response.status_code == 404
 
 
 def test_api_get_users(client):
-    response = client.get('/api/users', data={
-        'username' : 'root',
-        'password' : 'root'
-    })
+    response = client.get('/api/users', headers=http_basic_headers('root', 'root'))
 
+    assert response.status_code == 200
     assert response.content_type == 'application/json'
     data = json.loads(response.get_data())
     print data
@@ -422,8 +429,5 @@ def test_api_get_users(client):
 
 
 def test_api_get_users_no_admin(client):
-    response = client.get('/api/users', data={
-        'username' : 'root1',
-        'password' : 'root1'
-    })
+    response = client.get('/api/users', headers=http_basic_headers('root1', 'root1'))
     assert response.status_code == 401

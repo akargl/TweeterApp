@@ -1,6 +1,5 @@
 import os
 import re
-import sqlite3
 import hashlib
 import time
 import imghdr
@@ -259,7 +258,7 @@ class FileWrapper:
 
     def serialize(self):
         return {
-            'id': self.file_id
+            'id': str(self.file_id) + self.extension
         }
 
     @staticmethod
