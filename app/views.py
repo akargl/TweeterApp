@@ -63,12 +63,22 @@ def index():
         # TODO: XSS sanitizing
         posts = Post.get_posts()
 
-        attachment_name, errors = FileWrapper.is_valid_filename(request.files.get('attachment'))
-        if len(errors):
-            return TemplateManager.get_index_template(posts, errors)
-        if post_content.strip() == "" and attachment_name is None:
+        imgfile = request.files.get('attachment')
+        if imgfile:
+            errors = FileWrapper.is_valid_file(imgfile)
+            if len(errors):
+                return TemplateManager.get_index_template(posts, errors)
+        if post_content.strip() == "" and imgfile is None:
             return TemplateManager.get_index_template(posts, ["Post can't be empty"])
-        post = Post.create(g.user.id, post_content, attachment_name)
+
+        filename = None
+        if imgfile:
+            wrapper = FileWrapper.create(imgfile, [g.user.id], False)
+            if not wrapper:
+                return TemplateManager.get_index_template(posts, ['Could not upload file'])
+            filename = wrapper.get_filename()
+
+        post = Post.create(g.user.id, post_content, filename)
         if not post:
             return TemplateManager.get_index_template(posts, ["Could not create post"])
 
@@ -184,15 +194,25 @@ def messages():
         messages = Message.get_messages_for_user_id(g.user.id)
 
         recipient = User.get_user_by_name(recipient_name)
-        if recipient is None:
+        if not recipient:
             return TemplateManager.get_messages_template(messages, ["Unknown recipient"])
 
-        attachment_name, errors = FileWrapper.is_valid_filename(request.files.get('attachment'))
-        if len(errors):
-            return TemplateManager.get_messages_template(messages, errors)
-        if message_content.strip() == "" and attachment_name is None:
+        imgfile = request.files.get('attachment')
+        if imgfile:
+            errors = FileWrapper.is_valid_file(imgfile)
+            if len(errors):
+                return TemplateManager.get_messages_template(messages, errors)
+        if message_content.strip() == "" and imgfile is None:
             return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
-        message = Message.create(g.user.id, recipient.id ,message_content, attachment_name)
+
+        filename = None
+        if imgfile:
+            wrapper = FileWrapper.create(imgfile, [g.user.id, recipient.id], True)
+            if not wrapper:
+                return TemplateManager.get_index_template(posts, ['Could not upload file'])
+            filename = wrapper.get_filename()
+
+        message = Message.create(g.user.id, recipient.id, message_content, filename)
         if not message:
             return TemplateManager.get_messages_template(messages, ["Could not create message"])
 
@@ -253,15 +273,14 @@ def update_delete_user(user):
 @authentication_required(redirect_to_login=False)
 def api_files():
     """ Get a json list of all accessible files """
-    files = FileWrapper.get_public_files()
-    # TODO: private files
+    files = FileWrapper.get_files(g.user.id)
     return jsonify([f.serialize() for f in files])
 
 
 @app.route("/api/files/<path:filename>")
 @authentication_required(redirect_to_login=False)
 def api_get_file(filename):
-    f_wrapper = FileWrapper.get_by_filename(filename)
+    f_wrapper = FileWrapper.get_by_filename(filename, g.user.id)
     if f_wrapper is None:
         return abort(httplib.NOT_FOUND)
     storage_path = f_wrapper.get_storagepath()

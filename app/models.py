@@ -166,7 +166,7 @@ class Post:
         return posts
 
     @staticmethod
-    def create(author_id, content, attachment_name=None):
+    def create(author_id, content, attachment_name):
         result = insert_db('INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [author_id, content, attachment_name, int(time.time())])
         if not result:
             return None
@@ -246,11 +246,10 @@ class Session:
 class FileWrapper:
     FILENAME_LENGTH = 32
 
-    def __init__(self, file_id, extension, private, permittedUserIds):
+    def __init__(self, file_id, extension, private):
         self.file_id = file_id
         self.extension = extension
         self.private = bool(private)
-        self.permittedUserIds = permittedUserIds
 
     def get_filename(self):
         return str(self.file_id) + self.extension
@@ -264,86 +263,59 @@ class FileWrapper:
         }
 
     @staticmethod
-    def is_valid_filename(file):
-        if file:
-            if file.filename != '':
-                if not FileWrapper.is_allowed_file(file):
-                    return None, ["Invalid attachment"]
-                # TODO: This code fragment smells. We have a static method that
-                # internally creates a temporary object to get the filename
-                f_wrapper = FileWrapper.create(file, False)
-                if f_wrapper is None:
-                    return None, ["Invalid attachment"]
-                return f_wrapper.get_filename(), []
-        return None, []
+    def is_valid_file(imgfile):
+        file_extension = path.splitext(imgfile.filename)[1]
+        app.logger.debug("file_extension is" + file_extension)
+        if file_extension.lower() not in app.config['ALLOWED_EXTENSIONS']:
+            return ['Invalid file extension']
 
-    @staticmethod
-    def is_allowed_file(file_):
-        f_ext = path.splitext(file_.filename)[1]
-        app.logger.debug("f_ext is" + f_ext)
-        if f_ext.lower() not in app.config['ALLOWED_EXTENSIONS']:
-            return False
-
-        file_.seek(0)
-        imghdr_type = imghdr.what(None, file_.read())
+        imgfile.seek(0)
+        imghdr_type = imghdr.what(None, imgfile.read())
         if "." + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
-            return False
-        file_.seek(0)
-        return True
+            return ['Invalid file type']
+        imgfile.seek(0)
+        return []
 
     @staticmethod
-    def get_public_files():
-        file_data = query_db('SELECT * from Files WHERE private = 0')
+    def get_files(user_id):
+        file_data = query_db('SELECT * FROM Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (permission.user_id = ? or file.private=0)', [user_id])
         if not file_data:
             return []
+
         files = []
         for f in file_data:
-            wrapper = FileWrapper(f['id'], f['extension'], f['private'], [])
-            if wrapper.private:
-                # Not allowed to get private files when querying public data
-                return []
+            wrapper = FileWrapper(f['id'], f['extension'], f['private'])
             files.append(wrapper)
         return files
 
     @staticmethod
-    def get_by_id(file_id):
-        file_data = query_db('SELECT * from Files WHERE id = ?', [file_id], one=True)
+    def get_by_filename(filename, user_id):
+        file_data = query_db('SELECT * from Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (id || extension = ? and (permission.user_id = ? or file.private=0))', [filename, user_id], one=True)
         if not file_data:
             return None
-        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
-        if f_wrapper.private:
-            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [file_id])
-            for p in p_data:
-                f_wrapper.permittedUserIds.append(p['user_id'])
+
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'])
         return f_wrapper
 
     @staticmethod
-    def get_by_filename(filename):
-        file_data = query_db('SELECT * from Files WHERE id || extension = ?', [filename], one=True)
-        if not file_data:
+    def create(imgfile, permitted_user_ids, private):
+        errors = FileWrapper.is_valid_file(imgfile)
+        if len(errors):
             return None
-        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'], [])
-        if f_wrapper.private:
-            p_data = query_db('SELECT * from FilePermissions WHERE id = ?', [file_data['id']])
-            for p in p_data:
-                f_wrapper.permittedUserIds.append(p['user_id'])
-        return f_wrapper
 
-    @staticmethod
-    def create(file_, private, permittedUserIds=[]):
-        private = bool(private)
-        if not FileWrapper.is_allowed_file(file_):
-            return None
-        f_ext = path.splitext(file_.filename)[1]
-        file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
+        f_ext = path.splitext(imgfile.filename)[1]
+        file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, bool(private)])
         if not file_id:
             return None
-        if private:
-            for user_id in permittedUserIds:
-                # TODO: error handling?
-                insert_db('INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [file_id, user_id])
-        f_wrapper = FileWrapper(file_id, f_ext, private, permittedUserIds)
+        for user_id in permitted_user_ids:
+            status = insert_db('INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [file_id, user_id])
+            if not status:
+                # TODO: Rollback??
+                return None
+
+        f_wrapper = FileWrapper(file_id, f_ext, private)
+
         storage_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], f_wrapper.get_filename())
         app.logger.debug("Saving attachment to {:s}".format(storage_path))
-        file_.save(storage_path)
+        imgfile.save(storage_path)
         return f_wrapper
