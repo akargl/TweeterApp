@@ -249,7 +249,7 @@ class FileWrapper:
     def __init__(self, file_id, extension, private):
         self.file_id = file_id
         self.extension = extension
-        self.private = private
+        self.private = bool(private)
 
     def get_filename(self):
         return str(self.file_id) + self.extension
@@ -264,19 +264,17 @@ class FileWrapper:
 
     @staticmethod
     def is_valid_file(imgfile):
-        if imgfile.filename != '':
-            file_extension = path.splitext(imgfile.filename)[1]
-            app.logger.debug("file_extension is" + file_extension)
-            if file_extension.lower() not in app.config['ALLOWED_EXTENSIONS']:
-                return ['Invalid file extension']
+        file_extension = path.splitext(imgfile.filename)[1]
+        app.logger.debug("file_extension is" + file_extension)
+        if file_extension.lower() not in app.config['ALLOWED_EXTENSIONS']:
+            return ['Invalid file extension']
 
-            imgfile.seek(0)
-            imghdr_type = imghdr.what(None, imgfile.read())
-            if "." + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
-                return ['Invalid file type']
-            imgfile.seek(0)
-            return []
-        return ['No filename']
+        imgfile.seek(0)
+        imghdr_type = imghdr.what(None, imgfile.read())
+        if "." + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
+            return ['Invalid file type']
+        imgfile.seek(0)
+        return []
 
     @staticmethod
     def get_files(user_id):
@@ -286,7 +284,7 @@ class FileWrapper:
 
         files = []
         for f in file_data:
-            wrapper = FileWrapper(f['id'], f['extension'], bool(f['private']))
+            wrapper = FileWrapper(f['id'], f['extension'], f['private'])
             files.append(wrapper)
         return files
 
@@ -296,18 +294,17 @@ class FileWrapper:
         if not file_data:
             return None
 
-        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], bool(file_data['private']))
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], file_data['private'])
         return f_wrapper
 
     @staticmethod
     def create(imgfile, permitted_user_ids, private):
-        private = bool(private)
         errors = FileWrapper.is_valid_file(imgfile)
         if len(errors):
             return None
 
         f_ext = path.splitext(imgfile.filename)[1]
-        file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, private])
+        file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [f_ext, bool(private)])
         if not file_id:
             return None
         for user_id in permitted_user_ids:

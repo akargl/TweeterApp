@@ -73,8 +73,9 @@ def index():
 
         filename = None
         if imgfile:
-            # TODO: error checking
             wrapper = FileWrapper.create(imgfile, [g.user.id], False)
+            if not wrapper:
+                return TemplateManager.get_index_template(posts, ['Could not upload file'])
             filename = wrapper.get_filename()
 
         post = Post.create(g.user.id, post_content, filename)
@@ -204,9 +205,11 @@ def messages():
         if message_content.strip() == "" and imgfile is None:
             return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
 
-        filename = ""
+        filename = None
         if imgfile:
             wrapper = FileWrapper.create(imgfile, [g.user.id, recipient.id], True)
+            if not wrapper:
+                return TemplateManager.get_index_template(posts, ['Could not upload file'])
             filename = wrapper.get_filename()
 
         message = Message.create(g.user.id, recipient.id, message_content, filename)

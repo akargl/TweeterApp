@@ -21,8 +21,8 @@ def client():
         db.init_db()
         db.create_user('root', 'root', True)
         db.create_user('foo', 'mypassword', False)
-        models.Post.create(1, 'My news', "")
-        models.Message.create(2, 1, 'My message', "")
+        models.Post.create(1, 'My news', None)
+        models.Message.create(2, 1, 'My message', None)
 
         yield client
 
@@ -58,8 +58,8 @@ def logout(client):
 def test_database_cascading(client):
     db.create_user('foobar', 'foobar', False)
     u = models.User.get_user_by_name('foobar')
-    models.Post.create(u.id, 'foo', '')
-    models.Post.create(u.id, 'foo bar', '')
+    models.Post.create(u.id, 'foo', None)
+    models.Post.create(u.id, 'foo bar', None)
 
     # Deleting the user needs to delete all depending rows in other tables
     u.delete()
