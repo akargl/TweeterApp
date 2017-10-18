@@ -74,7 +74,7 @@ def index():
         filename = None
         if imgfile:
             # TODO: error checking
-            wrapper = FileWrapper.create(imgfile, [g.user.id])
+            wrapper = FileWrapper.create(imgfile, [g.user.id], False)
             filename = wrapper.get_filename()
 
         post = Post.create(g.user.id, post_content, filename)
@@ -206,7 +206,7 @@ def messages():
 
         filename = ""
         if imgfile:
-            wrapper = FileWrapper.create(imgfile, [g.user.id, recipient.id])
+            wrapper = FileWrapper.create(imgfile, [g.user.id, recipient.id], True)
             filename = wrapper.get_filename()
 
         message = Message.create(g.user.id, recipient.id, message_content, filename)
@@ -270,7 +270,7 @@ def api_files():
 @app.route("/api/files/<path:filename>")
 @authentication_required(redirect_to_login=False)
 def api_get_file(filename):
-    f_wrapper = FileWrapper.get_by_filename(filename)
+    f_wrapper = FileWrapper.get_by_filename(filename, g.user.id)
     if f_wrapper is None:
         return abort(httplib.NOT_FOUND)
     storage_path = f_wrapper.get_storagepath()

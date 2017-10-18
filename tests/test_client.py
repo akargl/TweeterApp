@@ -41,7 +41,7 @@ def upload_file(filename):
     panda_path = os.path.join(dir_path, "test_data", filename)
     with open(panda_path, 'rb') as f:
         panda_file = FileStorage(f)
-        models.FileWrapper.create(panda_file, [1])
+        models.FileWrapper.create(panda_file, [1], False)
 
 
 def login(client, username, password):
