@@ -12,14 +12,13 @@ from templates import TemplateManager
 # Session handling
 #   + Expirary date for cookies
 # Admin Features
-#  + What happens if we delete the last admin?
 #
 # Deployment via Docker
+#  * Initial Database?, Seed database?
 # Readme
 # Sample Content
 # Tests
 # Remove sensitive debug output (e.g. passwords)
-# User pbkdf2 for password hash
 #
 # Database:
 # Size limits for database entries
@@ -28,7 +27,7 @@ from templates import TemplateManager
 # Security considerations
 ## Password storage/User authentication
 * concatenate password with random salt -> hash it -> store hash and salt in db
-* TODO: use slow/resource intensive hash algo (e.g. scrypt or bcrypt)
+* use slow/resource intensive hash algo (e.g. scrypt or bcrypt)
 * Sessions: generate random token -> set cookie. User presents cookie with token to authenticate requests
 * set Httponly flag in session cookie to prevent theft via js
 
@@ -60,7 +59,6 @@ def index():
         return TemplateManager.get_index_template(posts)
     else:
         post_content = request.form['post_content']
-        # TODO: XSS sanitizing
         posts = Post.get_posts()
 
         imgfile = request.files.get('attachment')
@@ -95,7 +93,6 @@ def login():
     else:
         username = request.form['username']
         password = request.form['password']
-        # TODO: XSS sanitizing
 
         username = username.strip()
         app.logger.debug("User: {:s}:{:s}".format(username, password))
@@ -150,12 +147,9 @@ def register():
         errors = []
         username = request.form['username']
         password = request.form['password']
-
         username = username.strip()
 
         app.logger.debug("User: {:s}:{:s}".format(username, password))
-
-        # TODO: XSS sanitizing
 
         errors = User.verify_credential_policy(username, password)
         if len(errors):
@@ -236,12 +230,9 @@ def user(id):
         abort(httplib.NOT_FOUND)
 
     if request.method == 'PUT':
-        # TODO: XSS handling
         is_admin = request.form['is_admin'] == "1"
         user.change_role(is_admin)
     elif request.method == 'DELETE':
-        # TODO: user.delete() kills all sessions. Does this have a side effect
-        # for currently active users?
         user.delete()
     return httplib.NO_CONTENT
 

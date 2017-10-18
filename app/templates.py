@@ -5,7 +5,6 @@ from app import app
 import datetime
 
 class TemplateManager(object):
-    #TODO: add escaping mathods for other contexts as needed
     @staticmethod
     def escape_for_html_element_context(unsafe):
         """Escape unsafe input for use inside HTML tags
@@ -29,14 +28,11 @@ class TemplateManager(object):
 
         register_template = TemplateManager.get_template("register-template", {"form_target" : url_for('register'), "form_method" : "POST"})
 
-        nav_links = ""
-        #nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
-
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         main_content = alerts + register_template
 
-        main_template = TemplateManager.get_template("main-template", {"main_title" : "Register", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : nav_links})
+        main_template = TemplateManager.get_template("main-template", {"main_title" : "Register", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : ""})
 
         return main_template
 
@@ -46,14 +42,11 @@ class TemplateManager(object):
 
         login_template = TemplateManager.get_template("login-template", {"form_target" : url_for('login'), "form_method" : "POST"})
 
-        nav_links = ""
-        #nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/", False), TemplateManager.generate_nav_link("Messages", "messages", False)])
-
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         main_content = alerts + login_template
 
-        main_template = TemplateManager.get_template("main-template", {"main_title" : "Login", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : nav_links})
+        main_template = TemplateManager.get_template("main-template", {"main_title" : "Login", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : ""})
 
         return main_template
 
@@ -159,7 +152,6 @@ class TemplateManager(object):
             return None
         return Template(raw_template).safe_substitute(substitutions)
 
-#TODO: load dynamically on startup from files in templates/
     templates = { "main-template" :
     """
 <!DOCTYPE html>
@@ -275,7 +267,6 @@ class TemplateManager(object):
         <img class="card-img-top" src="${post_image_src}" style="max-height: 300px; object-fit: contain;">
     </a>
     <div class="card-body">
-        <!--<h4 class="card-title">${post_title}</h4>-->
         <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author} at ${post_time}</h6>
         <p class="card-text">${post_text}</p>
     </div>
@@ -289,7 +280,6 @@ class TemplateManager(object):
         <img class="card-img-top" src="${message_image_src}" style="max-height: 300px; object-fit: contain;">
     </a>
     <div class="card-body">
-        <!--<h4 class="card-title">${message_title}</h4>-->
         <h6 class="card-subtitle mb-2 text-muted">Sent by ${message_author} to ${message_recipient} at ${message_time}</h6>
         <p class="card-text">${message_text}</p>
     </div>
@@ -360,7 +350,7 @@ class TemplateManager(object):
 </div>
     """,
 
-    "administration-main-template" : 
+    "administration-main-template" :
     """
 <h1>Administration</h1>
 <ul class="list-group">
@@ -375,7 +365,7 @@ class TemplateManager(object):
         <div class="col">
             ${user_name} ${group_badges}
         </div>
-        <div class="col"> 
+        <div class="col">
             <button type="button" class="btn btn-primary btn-sm" onclick="administrationPromotionClickHandler(${user_id});">
                 Promote to admin
             </button>
@@ -391,7 +381,7 @@ class TemplateManager(object):
     """
 <span class="badge badge-primary">${group_name}</span>
     """,
-    
+
 
     "alert-template" :
     """
