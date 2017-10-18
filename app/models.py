@@ -65,6 +65,7 @@ class User:
 
     @staticmethod
     def create_hashed_password(salt, password):
+        # TODO: Maybe use scrypt
         hash_bytes = hashlib.pbkdf2_hmac(User.HASH_ALGO, password, salt, User.HASH_ITERATIONS)
         hashed_password = b64encode(hash_bytes)
 
@@ -72,7 +73,6 @@ class User:
 
     @staticmethod
     def password_compare(a, b):
-        # TODO: check if we aren't throwing away entropy here
         return compare_digest(a.decode('utf-8'), b.decode('utf-8'))
 
     @staticmethod

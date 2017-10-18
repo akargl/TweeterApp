@@ -45,8 +45,8 @@ def initdb_command():
     init_db()
     print('Initialized the database.')
 
+    # TODO: Sample content
     create_user('root', 'root', True)
-    # TODO: Remove
     create_user('root1', 'root1', False)
 
 
