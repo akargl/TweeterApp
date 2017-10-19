@@ -65,7 +65,7 @@ def authentication_required(admin=False, redirect_to_login=True):
 
 
 def csrf_protection():
-    if request.method not in ['POST', 'PUT', 'DELETE']:
+    if request.method not in app.config['CSRF_METHODS']:
         return
 
     # Get the CSRF token

@@ -6,3 +6,4 @@ MAX_CONTENT_LENGTH = 20 * 1024 * 1024
 # TODO: Is this the right way?
 SECRET_KEY = "my secret key"
 MAX_CSRF_TOKEN_AGE = 3600
+CSRF_METHODS = ['POST', 'PUT', 'DELETE']
