@@ -62,7 +62,7 @@ class TemplateManager(object):
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
-        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS'])})
+        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS']), 'csrf_token' : g.get('csrf_token', '')})
 
         posts_content = ""
         for p in posts:
@@ -78,7 +78,7 @@ class TemplateManager(object):
 
         main_content = alerts + post_form + posts_content
 
-        main_template = TemplateManager.get_template("main-template", {"main_title" : "Posts", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username})
+        main_template = TemplateManager.get_template("main-template", {"main_title" : "Posts", "main_content" : main_content, "user_menu_display" : "", "nav_items" : nav_links, "username" : escaped_username, 'csrf_token' : g.get('csrf_token', '')})
 
         return main_template
 
@@ -95,7 +95,7 @@ class TemplateManager(object):
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
-        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS'])})
+        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS']), 'csrf_token' : g.get('csrf_token', '')})
 
         messages_content = ""
         for m in messages:
@@ -197,10 +197,10 @@ class TemplateManager(object):
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                         <a class="dropdown-item" href="#" onclick="document.getElementById('logoutForm').submit();">
-                            <form id="logoutForm" action="logout" method="POST"></form>Logout
+                            <form id="logoutForm" action="logout" method="POST"><input type="hidden" name="csrf-token" value="${csrf_token}"/></form>Logout
                         </a>
                         <a class="dropdown-item" href="#" onclick="document.getElementById('deregisterForm').submit();">
-                            <form id="deregisterForm" action="deregister" method="POST"></form>Delete my account
+                            <form id="deregisterForm" action="deregister" method="POST"><input type="hidden" name="csrf-token" value="${csrf_token}"/></form>Delete my account
                         </a>
                     </div>
                 </li>
@@ -297,10 +297,7 @@ class TemplateManager(object):
         <h4 class="card-title">Create new post</h4>
         <h6 class="card-subtitle mb-2 text-muted">Posting as ${username}</h6>
         <form action="${form_target}" method="${form_method}" enctype="multipart/form-data">
-            <!-- <div class="form-group">
-                <label for="post_title">Post title</label>
-                <input type="text" class="form-control" id="post_title" name="post_title" placeholder="">
-            </div> -->
+            <input type="hidden" name="csrf-token" value="${csrf_token}"/>
             <div class="form-group">
 			    <label for="post_content">Your post</label>
 			    <textarea class="form-control" id="post_content" name="post_content" rows="3"></textarea>
@@ -327,10 +324,7 @@ class TemplateManager(object):
         <h4 class="card-title">Send a message</h4>
         <h6 class="card-subtitle mb-2 text-muted">Send from ${username}</h6>
         <form action="${form_target}" method="${form_method}" enctype="multipart/form-data">
-            <!-- <div class="form-group">
-                <label for="post_title">Post title</label>
-                <input type="text" class="form-control" id="post_title" name="post_title" placeholder="">
-            </div> -->
+            <input type="hidden" name="csrf-token" value="${csrf_token}"/>
             <div class="form-group">
                 <label for="message_recipient">Recipient</label>
                 <input type="text" class="form-control" id="message_recipient" name="message_recipient" placeholder="">

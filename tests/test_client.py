@@ -17,6 +17,8 @@ def client():
     app.config['TESTING'] = True
     app.config['DEBUG'] = True
     app.config['UPLOAD_FOLDER'] = os.path.join(dir_path, tempfile.mkdtemp())
+    # Disable CSRF for testing
+    app.config['CSRF_METHODS'] = []
     client = app.test_client()
 
     with app.app_context():
