@@ -1,7 +1,11 @@
+from __future__ import print_function
 import os
+import sys
 import sqlite3
+import random
 from flask import g
 from app import app
+from loremipsum import get_sentences
 
 
 # Based on the flask sqlite tutorial
@@ -29,8 +33,8 @@ def create_user(username, password, is_admin):
     from models import User
 
     salt, hashed_password = User.create_salt_and_hashed_password(password)
-    User.create(username, salt, hashed_password, is_admin)
-    print('User created: username: {:s}, password: {:s}, is_admin: {:d}'.format(username, password, is_admin))
+    user = User.create(username, salt, hashed_password, is_admin)
+    return user
 
 
 @app.cli.command('initdb')
@@ -45,9 +49,66 @@ def initdb_command():
     init_db()
     print('Initialized the database.')
 
-    # TODO: Sample content
-    create_user('root', 'root', True)
-    create_user('root1', 'root1', False)
+
+def print_dot():
+    print('.', end='')
+    sys.stdout.flush()
+
+
+@app.cli.command('seeddb')
+def seeddb_command():
+    """ Seed the database with the default data """
+    from models import Post, Message
+
+    try:
+        os.remove('database.db')
+    except OSError:
+        pass
+
+    init_db()
+    print('Initialized the database.')
+
+    user_seed = [
+        ('root', 'root', True),
+        ('admin', 'admin', True),
+        ('Max', 'max_password_123', False),
+        ('Alex', 'alex_password_123', False),
+        ('Robert', 'robert_password_123', False),
+        ('Anna', 'anna_password_123', False),
+    ]
+    nr_public_posts = 100
+    nr_private_posts = 100
+
+    users = []
+    print('Creating users')
+    # Create users
+    for u in user_seed:
+        user = create_user(*u)
+        users.append(user)
+        print_dot()
+
+
+    print('\nCreating public posts')
+    # Create public posts for each user
+    for i in range(nr_public_posts):
+        # TODO: Manage uploads
+        user = random.choice(users)
+        sentence = ' '.join(get_sentences(random.randint(1, 4)))
+        Post.create(user.id, sentence, None)
+        print_dot()
+
+    print('\nCreating private messages')
+    for i in range(nr_public_posts):
+        # TODO: Manage uploads
+        random.shuffle(users)
+        author = users[0]
+        recipient = users[1]
+
+        sentence = ' '.join(get_sentences(random.randint(1, 4)))
+        Message.create(author.id, recipient.id, sentence, None)
+        print_dot()
+
+    print("")
 
 
 def query_db(query, args=(), one=False):
