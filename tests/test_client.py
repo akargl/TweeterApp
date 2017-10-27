@@ -490,3 +490,26 @@ def test_update_user_admin(client):
 
     assert response.status_code == 204
     assert models.User.get_user_by_id(2).is_admin
+
+
+def test_delete_user_no_admin(client):
+    login(client, 'foo', 'mypassword')
+
+    response = client.delete('/users/2')
+    assert response.status_code == 401
+
+
+def test_delete_user_no_admin(client):
+    login(client, 'root', 'root')
+
+    response = client.delete('/users/9999')
+    assert response.status_code == 404
+
+
+def test_delete_user_admin(client):
+    login(client, 'root', 'root')
+
+    response = client.delete('/users/2')
+
+    assert response.status_code == 204
+    assert models.User.get_user_by_id(2) == None
