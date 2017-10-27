@@ -52,6 +52,8 @@ class User:
     @staticmethod
     def get_all():
         result = query_db('SELECT * from Users')
+        if not result:
+            return []
         users = []
         for r in result:
             users.append(User(r['id'], r['username'], bool(r['is_admin'])))

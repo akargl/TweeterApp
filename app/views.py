@@ -89,6 +89,12 @@ def index():
 def login():
     # Post: params[username, password]
     if request.method == 'GET':
+        # If the user is already logged in, just display the index
+        user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
+        if user:
+            # Already logged in
+            return redirect(url_for('index'))
+
         return TemplateManager.get_login_template()
     else:
         username = request.form['username']
@@ -234,7 +240,7 @@ def user(id):
         # TODO: if status is None -> error?
     elif request.method == 'DELETE':
         user.delete()
-    return httplib.NO_CONTENT
+    return ('', httplib.NO_CONTENT)
 
 
 @app.route("/api/files")

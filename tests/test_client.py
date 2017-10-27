@@ -23,10 +23,7 @@ def client():
 
     with app.app_context():
         db.init_db()
-        db.create_user('root', 'root', True)
-        db.create_user('foo', 'mypassword', False)
-        models.Post.create(1, 'My news', None)
-        models.Message.create(2, 1, 'My message', None)
+        db.seed_test_db()
 
         yield client
 
@@ -81,11 +78,11 @@ def test_seed_db(client):
     assert len(models.User.get_all()) > 3
     assert len(models.Post.get_all()) > 50
 
+
 def test_unauthenticated_url_points_to_login(client):
     auth_urls_get = [
         '/',
-        '/messages',
-        '/administration'
+        '/messages'
     ]
 
     for url in auth_urls_get:
@@ -404,21 +401,30 @@ def test_api_wrong_credentials(client):
 
 def test_api_get_files(client):
     upload_file("panda.png")
+    upload_file("panda.jpg")
 
     response = client.get('/api/files', headers=http_basic_headers('root', 'root'))
 
     assert response.status_code == 200
     assert response.content_type == 'application/json'
     data = json.loads(response.get_data())
-    assert len(data) == 1
+    assert len(data) == 2
 
 
-def test_api_file_access_png(client):
-    # TODO: Access all valid files
-    upload_file("panda.png")
+def test_api_valid_file_access(client):
+    files = [
+        'panda.png',
+        'panda.jpg',
+        'panda.jpeg',
+    ]
+    for i, f in enumerate(files):
+        upload_file(f)
 
-    response = client.get('/api/files/1.png', headers=http_basic_headers('root', 'root'))
-    assert response.status_code == 200
+        route = '/api/files/{:d}.{:s}'.format(i+1, f.split('.')[-1])
+        print route
+        response = client.get(route, headers=http_basic_headers('root', 'root'))
+
+        assert response.status_code == 200
 
 
 def test_api_file_access_symlink(client):
@@ -445,5 +451,42 @@ def test_api_get_users(client):
 
 
 def test_api_get_users_no_admin(client):
-    response = client.get('/api/users', headers=http_basic_headers('root1', 'root1'))
+    response = client.get('/api/users', headers=http_basic_headers('foo', 'mypassword'))
     assert response.status_code == 401
+
+
+def test_administration_normal_user(client):
+    login(client, 'foo', 'mypassword')
+
+    response = client.get('/administration')
+    assert response.status_code == 401
+
+
+def test_administration_admin_user(client):
+    login(client, 'root', 'root')
+
+    response = client.get('/administration')
+    assert response.status_code == 200
+
+
+def test_update_user_no_admin(client):
+    login(client, 'foo', 'mypassword')
+
+    response = client.put('/users/2', data=dict({ 'is_admin': '1' }))
+    assert response.status_code == 401
+
+
+def test_update_user_no_admin(client):
+    login(client, 'root', 'root')
+
+    response = client.put('/users/9999', data=dict({ 'is_admin': '1' }))
+    assert response.status_code == 404
+
+
+def test_update_user_admin(client):
+    login(client, 'root', 'root')
+
+    response = client.put('/users/2', data=dict({ 'is_admin': '1' }))
+
+    assert response.status_code == 204
+    assert models.User.get_user_by_id(2).is_admin

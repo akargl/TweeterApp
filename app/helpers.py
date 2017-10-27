@@ -55,8 +55,6 @@ def authentication_required(admin=False, redirect_to_login=True):
 
             g.user = user
             if admin and not user.is_admin:
-                if redirect_to_login:
-                    return redirect(url_for('login'))
                 return abort(httplib.UNAUTHORIZED)
 
             return func(*args, **kwargs)
