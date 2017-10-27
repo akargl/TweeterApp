@@ -96,7 +96,7 @@ def login():
 
         username = username.strip()
         app.logger.debug("User: {:s}:{:s}".format(username, password))
-        user = Session.active_user(request.cookies.get(Session.SESSION_KEY))
+        user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
             # Already logged in
             return redirect(url_for('index'), code=httplib.SEE_OTHER)
@@ -107,17 +107,16 @@ def login():
             return TemplateManager.get_login_template(["Invalid Login or password."])
 
         _, hashed_password = User.create_hashed_password(salt, password)
-
         user = User.get_and_validate_user(username, hashed_password)
         if not user:
             return TemplateManager.get_login_template(["Invalid Login or password."])
 
-        result, session_token = Session.new_session(user)
+        result, session_token, csrf_token = Session.new_session(user)
         if not result:
             return TemplateManager.get_login_template(["Could not create session"])
 
         # Make the response and set the cookie
-        url = url_for(request.args.get('next', 'index'))
+        url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
         app.logger.debug("session_token: {:s}".format(session_token))
         response.set_cookie(Session.SESSION_KEY, session_token, httponly=True)
@@ -135,7 +134,7 @@ def logout():
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     # Post: params[username, password]
-    user = Session.active_user(request.cookies.get(Session.SESSION_KEY))
+    user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
     if user:
         # Already logged in
         return redirect(url_for('index'))

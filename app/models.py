@@ -6,6 +6,7 @@ import imghdr
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
+from itsdangerous import URLSafeTimedSerializer
 from db import query_db, insert_db
 from app import app
 from os import path
@@ -218,18 +219,24 @@ class Session:
     @staticmethod
     def active_user(session_token):
         app.logger.debug("Get active user")
-        user_id = query_db('SELECT user_id from Sessions WHERE session_token = ?', [session_token], one=True)
-        if user_id is None:
-            return None
-        return User.get_user_by_id(user_id['user_id'])
+        data = query_db('SELECT user_id, csrf_token from Sessions WHERE session_token = ?', [session_token], one=True)
+        if data is None:
+            return None, None
+        return User.get_user_by_id(data['user_id']), data['csrf_token']
 
     @staticmethod
     def new_session(user):
         app.logger.debug("Create new session for user {:s}".format(user.username))
         session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
-        result = insert_db('INSERT INTO Sessions (session_token, user_id) Values (?, ?)', [session_token, user.id])
-        return result, session_token
+
+        csrf_token = os.urandom(Session.TOKEN_LENGTH)
+        csrf_token = b64encode(session_token).decode('utf-8')
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        csrf_token = signer.dumps(csrf_token)
+
+        result = insert_db('INSERT INTO Sessions (session_token, user_id, csrf_token) Values (?, ?, ?)', [session_token, user.id, csrf_token])
+        return result, session_token, csrf_token
 
     @staticmethod
     def delete(user_id, session_token):
