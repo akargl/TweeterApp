@@ -55,11 +55,11 @@ from templates import TemplateManager
 def index():
     # Post: params[content, file]
     if request.method == 'GET':
-        posts = Post.get_posts()
+        posts = Post.get_all()
         return TemplateManager.get_index_template(posts)
     else:
         post_content = request.form['post_content']
-        posts = Post.get_posts()
+        posts = Post.get_all()
 
         imgfile = request.files.get('attachment')
         if imgfile:
@@ -81,7 +81,7 @@ def index():
             return TemplateManager.get_index_template(posts, ["Could not create post"])
 
         # Get new posts
-        posts = Post.get_posts()
+        posts = Post.get_all()
         return TemplateManager.get_index_template(posts, []), httplib.CREATED
 
 
@@ -230,7 +230,8 @@ def user(id):
 
     if request.method == 'PUT':
         is_admin = request.form['is_admin'] == "1"
-        user.change_role(is_admin)
+        status = user.change_role(is_admin)
+        # TODO: if status is None -> error?
     elif request.method == 'DELETE':
         user.delete()
     return httplib.NO_CONTENT

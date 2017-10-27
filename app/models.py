@@ -110,10 +110,12 @@ class User:
     @staticmethod
     def create(username, salt, hashed_password, is_admin=False):
         #usernames are case insensitive so we need to check first regardless of unique constraint
-        if User.get_user_by_name(username) is not None:
+        if User.get_user_by_name(username):
+            app.logger.debug("User already exists")
             return None
         result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
         if not result:
+            app.logger.debug("Fail")
             return None
         return User.get_user_by_name(username)
 
@@ -126,9 +128,12 @@ class User:
         if self.is_admin == is_admin:
             # Value does not change, nothing to do
             return
-        insert_db('UPDATE Users SET is_admin = ? WHERE id = ?', [int(is_admin), self.id])
+
+        result = insert_db('UPDATE Users SET is_admin = ? WHERE id = ?', [int(is_admin), self.id])
+        if not result:
+            return None
         self.is_admin = is_admin
-        # TODO: return code
+        return True
 
 
 class Post:
@@ -150,7 +155,7 @@ class Post:
         return posts
 
     @staticmethod
-    def get_posts():
+    def get_all():
         result = query_db('SELECT * from Posts')
         posts = []
         for r in result:
@@ -206,7 +211,6 @@ class Session:
     # int id (Primary key)
     # str session_token
     # int user_id -> User.id
-    # TODO: Add namespace to SESSION_KEY
     SESSION_KEY = 'spring_session_key'
     TOKEN_LENGTH = 32
 

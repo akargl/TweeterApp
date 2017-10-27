@@ -75,6 +75,12 @@ def test_database_cascading(client):
     assert len(models.Post.get_posts_by_user_id(u.id)) == 0
 
 
+def test_seed_db(client):
+    db.seed_db()
+
+    assert len(models.User.get_all()) > 3
+    assert len(models.Post.get_all()) > 50
+
 def test_unauthenticated_url_points_to_login(client):
     auth_urls_get = [
         '/',

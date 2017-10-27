@@ -21,6 +21,12 @@ def get_db():
 
 
 def init_db():
+    # Delete the database file
+    try:
+        os.remove(app.config['DATABASE'])
+    except OSError:
+        pass
+
     with app.app_context():
         db = get_db()
         with app.open_resource('schema.sql', mode='r') as f:
@@ -28,45 +34,24 @@ def init_db():
         db.commit()
 
 
-def create_user(username, password, is_admin):
-    # Import user only here to avoid a circular dependency
-    from models import User
-
-    salt, hashed_password = User.create_salt_and_hashed_password(password)
-    user = User.create(username, salt, hashed_password, is_admin)
-    return user
-
-
-@app.cli.command('initdb')
-def initdb_command():
-    """Initializes the database."""
-    # Delete the database file
-    try:
-        os.remove('database.db')
-    except OSError:
-        pass
-
-    init_db()
-    print('Initialized the database.')
-
-
 def print_dot():
     print('.', end='')
     sys.stdout.flush()
 
 
-@app.cli.command('seeddb')
-def seeddb_command():
-    """ Seed the database with the default data """
+def seed_test_db():
+    """ Seed the database for testing purpose """
     from models import Post, Message
 
-    try:
-        os.remove('database.db')
-    except OSError:
-        pass
+    create_user('root', 'root', True)
+    create_user('foo', 'mypassword', False)
+    Post.create(1, 'My news', None)
+    Message.create(2, 1, 'My message', None)
 
-    init_db()
-    print('Initialized the database.')
+
+def seed_db():
+    """ Seed the database """
+    from models import Post, Message
 
     user_seed = [
         ('root', 'root', True),
@@ -84,8 +69,9 @@ def seeddb_command():
     # Create users
     for u in user_seed:
         user = create_user(*u)
-        users.append(user)
-        print_dot()
+        if user:
+            users.append(user) 
+            print_dot()
 
 
     print('\nCreating public posts')
@@ -109,6 +95,29 @@ def seeddb_command():
         print_dot()
 
     print("")
+
+
+def create_user(username, password, is_admin):
+    # Import user only here to avoid a circular dependency
+    from models import User
+
+    salt, hashed_password = User.create_salt_and_hashed_password(password)
+    user = User.create(username, salt, hashed_password, is_admin)
+    print(user)
+    return user
+
+
+@app.cli.command('initdb')
+def initdb_command():
+    """Initializes the database."""
+    init_db()
+
+
+@app.cli.command('seeddb')
+def seeddb_command():
+    """ Seed the database with the default data """
+    init_db()
+    seed_db()
 
 
 def query_db(query, args=(), one=False):
