@@ -131,9 +131,12 @@ class TemplateManager(object):
 
         user_list_group = ""
         for u in users:
-            user_list_group += TemplateManager.get_template("administration-user-template", {"user_name" : TemplateManager.escape_for_html_element_context(u.username), "group_badges" : TemplateManager.get_template("administration-user-group-badge", {"group_name" : "Admin"}) if u.is_admin else "", "user_id" : u.id})
+            if u.is_admin:
+                user_list_group += TemplateManager.get_template("administration-user-template", {"user_name" : TemplateManager.escape_for_html_element_context(u.username), "group_badges" : TemplateManager.get_template("administration-user-group-badge", {"group_name" : "Admin"}), "user_id" : u.id, "promote_button_display" : "none", "demote_button_display" : ""})
+            else:
+                user_list_group += TemplateManager.get_template("administration-user-template", {"user_name" : TemplateManager.escape_for_html_element_context(u.username), "group_badges" : "", "user_id" : u.id, "promote_button_display" : "", "demote_button_display" : "none"})
 
-        admin_main = TemplateManager.get_template("administration-main-template", {"user_list_group" : user_list_group})
+        admin_main = TemplateManager.get_template("administration-main-template", {"user_list_group" : user_list_group, 'csrf_token' : g.get('csrf_token', '')})
 
         main_content = alerts + admin_main
 
@@ -350,6 +353,7 @@ class TemplateManager(object):
 
     "administration-main-template" :
     """
+<script type="text/javascript">window.csrf_token = "${csrf_token}";</script>
 <h1>Administration</h1>
 <ul class="list-group">
     ${user_list_group}
@@ -364,8 +368,11 @@ class TemplateManager(object):
             ${user_name} ${group_badges}
         </div>
         <div class="col">
-            <button type="button" class="btn btn-primary btn-sm" onclick="administrationPromotionClickHandler(${user_id});">
+            <button type="button" class="btn btn-primary btn-sm" onclick="administrationPromotionClickHandler(${user_id}, true);" style="display: ${promote_button_display};">
                 Promote to admin
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="administrationPromotionClickHandler(${user_id}, false);" style="display: ${demote_button_display};">
+                Demote to user
             </button>
             <button type="button" class="btn btn-danger btn-sm" onclick="administrationDeletionClickHandler(${user_id});">
                 Delete user

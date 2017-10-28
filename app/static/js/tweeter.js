@@ -1,8 +1,14 @@
-function requestUserPromotion(userId) {
+/**
+ * 
+ * @param {number} userId 
+ * @param {boolean} toAdmin 
+ */
+function requestUserPromotion(userId, toAdmin) {
     let url = `/users/${userId}`;
 
     let body = objectToFormData({
-        "is_admin" : "1"
+        "is_admin" : toAdmin ? "1" : "0",
+        "csrf-token" : window.csrf_token,
     });
 
     return fetch(url, {
@@ -11,19 +17,35 @@ function requestUserPromotion(userId) {
         headers : {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body : body})
+        body : body
+    })
         .then(status);
 }
 
+/**
+ * 
+ * @param {number} userId 
+ */
 function requestUserDeletion(userId) {
     let url = `/users/${userId}`;
 
-    return fetch(url, { credentials : "same-origin", method : "DELETE"})
+    let body = objectToFormData({
+        "csrf-token" : window.csrf_token,
+    });
+
+    return fetch(url, {
+        credentials : "same-origin",
+        method : "DELETE",
+        headers : {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body : body
+    })
         .then(status);
 }
 
-function administrationPromotionClickHandler(userId) {
-    return requestUserPromotion(userId)
+function administrationPromotionClickHandler(userId, toAdmin) {
+    return requestUserPromotion(userId, toAdmin)
         .then(() => {
             document.location.reload();
         });
