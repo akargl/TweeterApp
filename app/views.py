@@ -67,7 +67,7 @@ def index():
             if len(errors):
                 return TemplateManager.get_index_template(posts, errors)
 
-        if post_content == "" and imgfile is not None and imgfile.filename == '':
+        if post_content == "" and (imgfile is None or (imgfile is not None and imgfile.filename == '')):
             return TemplateManager.get_index_template(posts, ["Post can't be empty"])
 
         filename = None
@@ -202,7 +202,7 @@ def messages():
             errors = FileWrapper.is_valid_file(imgfile)
             if len(errors):
                 return TemplateManager.get_messages_template(messages, errors)
-        if message_content == "" and imgfile is not None and imgfile.filename == '':
+        if message_content == "" and (imgfile is None or (imgfile is not None and imgfile.filename == '')):
             return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
 
         filename = None
