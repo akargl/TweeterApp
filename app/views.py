@@ -58,7 +58,7 @@ def index():
         posts = Post.get_all()
         return TemplateManager.get_index_template(posts)
     else:
-        post_content = request.form['post_content']
+        post_content = request.form['post_content'].strip()
         posts = Post.get_all()
 
         imgfile = request.files.get('attachment')
@@ -66,7 +66,8 @@ def index():
             errors = FileWrapper.is_valid_file(imgfile)
             if len(errors):
                 return TemplateManager.get_index_template(posts, errors)
-        if post_content.strip() == "" and imgfile is None:
+
+        if post_content == "" and imgfile is not None and imgfile.filename == '':
             return TemplateManager.get_index_template(posts, ["Post can't be empty"])
 
         filename = None
@@ -187,7 +188,7 @@ def messages():
         messages = Message.get_messages_for_user_id(g.user.id)
         return TemplateManager.get_messages_template(messages)
     else:
-        message_content = request.form['message_content']
+        message_content = request.form['message_content'].strip()
         recipient_name = request.form['message_recipient'].strip()
 
         messages = Message.get_messages_for_user_id(g.user.id)
@@ -201,7 +202,7 @@ def messages():
             errors = FileWrapper.is_valid_file(imgfile)
             if len(errors):
                 return TemplateManager.get_messages_template(messages, errors)
-        if message_content.strip() == "" and imgfile is None:
+        if message_content == "" and imgfile is not None and imgfile.filename == '':
             return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
 
         filename = None
