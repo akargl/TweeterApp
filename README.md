@@ -23,16 +23,16 @@ The following endpoints are available:
 ## Startup
 
 * ### using Docker
-  
-    Assuming *docker* and *docker-compose* are installed already the app can simply be started with:
+
+    Assuming *docker* and *docker-compose* are already installed, the app can simply be started with:
 
     ```sh
     docker-compose up
     ```
 
 * ### without Docker
-  
-    Assuming *python* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
+
+    Assuming that *python* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
 
     ```sh
     pip install -r requirements.txt # Install the needed python packages
