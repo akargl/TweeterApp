@@ -23,22 +23,22 @@ The following endpoints are available:
 ## Startup
 
 * ### using Docker
+  
+    Assuming *docker* and *docker-compose* are installed already the app can simply be started with:
 
-  Assuming *docker* and *docker-compose* are installed already the app can simply be started with:
-
-  ```sh
-  docker-compose up
-  ```
+    ```sh
+    docker-compose up
+    ```
 
 * ### without Docker
+  
+    Assuming *python* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
 
-  Assuming *python* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
-
-  ```sh
-  pip install -r requirements.txt # Install the needed python packages
-  export FLASK_APP=run.py # set necessary environment variable for flask
-  flask run # start app
-  ```
+    ```sh
+    pip install -r requirements.txt # Install the needed python packages
+    export FLASK_APP=run.py # set necessary environment variable for flask
+    flask run # start app
+    ```
 
 Now the app will run on port 5000.
 
