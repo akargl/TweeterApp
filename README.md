@@ -32,12 +32,14 @@ The following endpoints are available:
 
 * ### without Docker
 
-    Assuming that *python* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
+    Assuming that *python 2.7* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
+
+    The following sequence of commands installs the needed requirements, sets the flask application, and starts the application.
 
     ```sh
-    pip install -r requirements.txt # Install the needed python packages
-    export FLASK_APP=run.py # set necessary environment variable for flask
-    flask run # start app
+    pip install -r requirements.txt
+    export FLASK_APP=run.py
+    flask run
     ```
 
 Now the app will run on port 5000.
@@ -50,7 +52,7 @@ Set up or reset the database:
 flask initdb
 ```
 
-Fill the database with some users, posts and messages:
+Fill the database with some users, posts, and messages:
 
 ```sh
 flask seeddb
