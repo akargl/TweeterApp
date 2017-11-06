@@ -68,7 +68,6 @@ class User:
 
     @staticmethod
     def create_hashed_password(salt, password):
-        # TODO: Maybe use scrypt
         hash_bytes = hashlib.pbkdf2_hmac(User.HASH_ALGO, password, salt, User.HASH_ITERATIONS)
         hashed_password = b64encode(hash_bytes)
 

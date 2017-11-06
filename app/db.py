@@ -4,6 +4,7 @@ import sys
 import sqlite3
 import random
 from flask import g
+from werkzeug.datastructures import FileStorage
 from app import app
 from loremipsum import get_sentences
 
@@ -24,6 +25,21 @@ def init_db():
     # Delete the database file
     try:
         os.remove(app.config['DATABASE'])
+    except OSError:
+        pass
+
+    try:
+        os.remove(app.config['DATABASE'])
+    except OSError:
+        pass
+
+    try:
+        dir_name = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
+        files = os.listdir(dir_name)
+
+        for item in files:
+            if any(item.lower().endswith(ext) for ext in app.config['ALLOWED_EXTENSIONS']):
+                os.remove(os.path.join(dir_name, item))
     except OSError:
         pass
 
@@ -49,9 +65,48 @@ def seed_test_db():
     Message.create(2, 1, 'My message', None)
 
 
+def create_user(username, password, is_admin):
+    # Import user only here to avoid a circular dependency
+    from models import User
+
+    salt, hashed_password = User.create_salt_and_hashed_password(password)
+    user = User.create(username, salt, hashed_password, is_admin)
+    return user
+
+
+def create_entry(permitted_user_ids, private):
+    # 3 different types of posts:
+    #   * text only
+    #   * image only
+    #   * text and image
+    from models import FileWrapper
+
+    post_type = random.randint(0, 2)
+    sample_images = ['panda.jpg', 'icon.pNg', 'panda.png', 'panda.jpeg']
+
+    if post_type == 0:
+        sentence = ' '.join(get_sentences(random.randint(1, 4)))
+        image = None
+    elif post_type == 1:
+        sentence = ''
+        image = random.choice(sample_images)
+    else:
+        sentence = ' '.join(get_sentences(random.randint(1, 4)))
+        image = random.choice(sample_images)
+
+    filename = None
+    if image:
+        image_path = os.path.join(app.root_path, '..','tests', 'test_data', image)
+        with open(image_path, 'rb') as fp:
+            file = FileStorage(fp)
+            wrapper = FileWrapper.create(file, permitted_user_ids, private)
+            filename = wrapper.get_filename()
+    return sentence, filename
+
+
 def seed_db():
     """ Seed the database """
-    from models import Post, Message
+    from models import Post, Message, FileWrapper
 
     user_seed = [
         ('root', 'root', True),
@@ -70,41 +125,28 @@ def seed_db():
     for u in user_seed:
         user = create_user(*u)
         if user:
-            users.append(user) 
+            users.append(user)
             print_dot()
-
 
     print('\nCreating public posts')
     # Create public posts for each user
     for i in range(nr_public_posts):
-        # TODO: Manage uploads
         user = random.choice(users)
-        sentence = ' '.join(get_sentences(random.randint(1, 4)))
-        Post.create(user.id, sentence, None)
+        sentence, filename = create_entry([user.id], False)
+        Post.create(user.id, sentence, filename)
         print_dot()
 
     print('\nCreating private messages')
-    for i in range(nr_public_posts):
-        # TODO: Manage uploads
+    for i in range(nr_private_posts):
         random.shuffle(users)
         author = users[0]
         recipient = users[1]
 
-        sentence = ' '.join(get_sentences(random.randint(1, 4)))
-        Message.create(author.id, recipient.id, sentence, None)
+        sentence, filename = create_entry([author.id, recipient.id], True)
+        Message.create(author.id, recipient.id, sentence, filename)
         print_dot()
 
     print("")
-
-
-def create_user(username, password, is_admin):
-    # Import user only here to avoid a circular dependency
-    from models import User
-
-    salt, hashed_password = User.create_salt_and_hashed_password(password)
-    user = User.create(username, salt, hashed_password, is_admin)
-    print(user)
-    return user
 
 
 @app.cli.command('initdb')

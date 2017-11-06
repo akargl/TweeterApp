@@ -52,7 +52,7 @@ Set up or reset the database:
 flask initdb
 ```
 
-Fill the database with some users, posts, and messages:
+Initializes the database with some users, posts, and messages including image uploads:
 
 ```sh
 flask seeddb
