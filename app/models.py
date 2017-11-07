@@ -6,7 +6,7 @@ import imghdr
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
-from itsdangerous import URLSafeTimedSerializer
+from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 from db import query_db, insert_db
 from app import app
 from os import path
@@ -233,6 +233,17 @@ class Session:
         data = query_db('SELECT user_id, csrf_token from Sessions WHERE session_token = ?', [session_token], one=True)
         if data is None:
             return None, None
+
+        try:
+            signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+            signer.loads(session_token, max_age=app.config['MAX_SESSION_AGE'])
+        except SignatureExpired:
+            Session.delete(data['user_id'], session_token)
+            return None, None
+        except BadData:
+            Session.delete(data['user_id'], session_token)
+            return None, None
+
         return User.get_user_by_id(data['user_id']), data['csrf_token']
 
     @staticmethod
@@ -240,10 +251,11 @@ class Session:
         app.logger.debug("Create new session for user {:s}".format(user.username))
         session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        session_token = signer.dumps(session_token)
 
         csrf_token = os.urandom(Session.TOKEN_LENGTH)
         csrf_token = b64encode(session_token).decode('utf-8')
-        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
         csrf_token = signer.dumps(csrf_token)
 
         result = insert_db('INSERT INTO Sessions (session_token, user_id, csrf_token) Values (?, ?, ?)', [session_token, user.id, csrf_token])
