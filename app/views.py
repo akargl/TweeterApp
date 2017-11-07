@@ -13,15 +13,8 @@ from templates import TemplateManager
 #   + Expirary date for cookies
 # Admin Features
 #
-# Deployment via Docker
-#  * Initial Database?, Seed database?
-# Readme
-# Sample Content
-# Tests
 # Remove sensitive debug output (e.g. passwords)
 #
-# Database:
-# Size limits for database entries
 
 """
 # Security considerations
@@ -98,11 +91,9 @@ def login():
 
         return TemplateManager.get_login_template()
     else:
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
 
-        username = username.strip()
-        app.logger.debug("User: {:s}:{:s}".format(username, password))
         user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
             # Already logged in
@@ -125,7 +116,6 @@ def login():
         # Make the response and set the cookie
         url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
-        app.logger.debug("session_token: {:s}".format(session_token))
         response.set_cookie(Session.SESSION_KEY, session_token, httponly=True)
 
         return response
@@ -149,19 +139,13 @@ def register():
     if request.method == 'GET':
         return TemplateManager.get_register_template()
     else:
-        app.logger.debug("Received register request")
         errors = []
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
-        username = username.strip()
-
-        app.logger.debug("User: {:s}:{:s}".format(username, password))
 
         errors = User.verify_credential_policy(username, password)
         if len(errors):
             return TemplateManager.get_register_template(errors)
-
-        app.logger.debug("User: {:s}:{:s}".format(username, password))
 
         salt, hashed_password = User.create_salt_and_hashed_password(password)
         user = User.create(username, salt, hashed_password)

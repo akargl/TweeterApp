@@ -113,13 +113,12 @@ class User:
 
     @staticmethod
     def create(username, salt, hashed_password, is_admin=False):
-        #usernames are case insensitive so we need to check first regardless of unique constraint
+        # usernames are case insensitive so we need to check first regardless of unique constraint
         if User.get_user_by_name(username):
             app.logger.debug("User already exists")
             return None
         result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [username, salt, hashed_password, int(is_admin)])
         if not result:
-            app.logger.debug("Fail")
             return None
         return User.get_user_by_name(username)
 
@@ -252,7 +251,6 @@ class Session:
 
     @staticmethod
     def delete(user_id, session_token):
-        app.logger.debug("Delete session {:s} for user id {:d}".format(session_token, user_id))
         insert_db('DELETE FROM Sessions WHERE user_id = ? AND session_token = ?', [user_id, session_token])
 
     @staticmethod

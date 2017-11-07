@@ -17,8 +17,6 @@ def user_from_credentials():
     if username is None or password is None:
         return None
 
-    app.logger.debug('Find User from credentials: username: {:s}, PW: {:s}'.format(username, password))
-
     username = username.strip()
     salt = User.get_salt(username)
     if not salt:
