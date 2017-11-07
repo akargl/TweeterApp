@@ -109,7 +109,7 @@ def login():
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
 
         expire_date = datetime.datetime.now()
-        expire_date = expire_date + datetime.timedelta(days=7)
+        expire_date = expire_date + datetime.timedelta(days=app.config['MAX_SESSION_AGE_DAYS'])
         response.set_cookie(Session.SESSION_KEY, session_token, httponly=True,
                             expires=expire_date)
         return response
