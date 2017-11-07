@@ -1,20 +1,11 @@
 import os
 import httplib
+import datetime
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
 from app import app
 from helpers import authentication_required
 from models import Session, User, Post, Message, FileWrapper
 from templates import TemplateManager
-
-# TODO:
-#
-# Minimal template engine
-# Session handling
-#   + Expirary date for cookies
-# Admin Features
-#
-# Remove sensitive debug output (e.g. passwords)
-#
 
 """
 # Security considerations
@@ -116,8 +107,11 @@ def login():
         # Make the response and set the cookie
         url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
-        response.set_cookie(Session.SESSION_KEY, session_token, httponly=True)
 
+        expire_date = datetime.datetime.now()
+        expire_date = expire_date + datetime.timedelta(days=app.config['MAX_SESSION_AGE_DAYS'])
+        response.set_cookie(Session.SESSION_KEY, session_token, httponly=True,
+                            expires=expire_date)
         return response
 
 

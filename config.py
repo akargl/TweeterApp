@@ -3,7 +3,9 @@ DATABASE = 'database.db'
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = set(['.png', '.jpg', '.jpeg'])
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024
-# TODO: Is this the right way?
 SECRET_KEY = "my secret key"
+# 1 hour
 MAX_CSRF_TOKEN_AGE = 3600
 CSRF_METHODS = ['POST', 'PUT', 'DELETE']
+MAX_SESSION_AGE_DAYS = 7
+MAX_SESSION_AGE = MAX_SESSION_AGE_DAYS * 60 * 60 * 3600

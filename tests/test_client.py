@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 import pytest
+import time
 from StringIO import StringIO
 from base64 import b64encode
 from werkzeug.datastructures import FileStorage
@@ -536,3 +537,18 @@ def test_delete_user_admin(client):
 
     assert response.status_code == 204
     assert models.User.get_user_by_id(2) == None
+
+
+def test_session_expiry(client):
+    login(client, 'root', 'root')
+    response = login(client, 'root', 'root')
+    assert response.status_code == 200
+    assert b'Logged in as root' in response.data
+    response = client.post('/', follow_redirects=True)
+    assert b'Login' not in response.data
+    originalSessionAge = app.config['MAX_SESSION_AGE']
+    app.config['MAX_SESSION_AGE'] = 10
+    time.sleep(12)
+    response = client.post('/', follow_redirects=True)
+    assert b'Login' in response.data
+    app.config['MAX_SESSION_AGE'] = originalSessionAge
