@@ -4,8 +4,8 @@ import tempfile
 import pytest
 from StringIO import StringIO
 from base64 import b64encode
-from app import app, db, models
 from werkzeug.datastructures import FileStorage
+from app import app, db, models
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -250,6 +250,17 @@ def test_post_feed_no_content(client):
     assert b"Post can&#x27;t be empty" in response.data
 
 
+def test_post_too_long_content(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        post_content="1" * (models.MAX_CONTENT_LENGTH + 1)
+    ))
+
+    assert response.status_code == 200
+    assert b"Could not create post" in response.data
+
+
 def test_post_content_and_file(client):
     login(client, 'root', 'root')
 
@@ -353,6 +364,18 @@ def test_send_message_no_content(client):
 
     assert response.status_code == 200
     assert b"Message can&#x27;t be empty" in response.data
+
+
+def test_send_message_too_long_content(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages', data=dict(
+        message_recipient="foo",
+        message_content="1" * (models.MAX_CONTENT_LENGTH + 1)
+    ))
+
+    assert response.status_code == 200
+    assert b"Could not create message" in response.data
 
 
 def test_api_unauthorized(client):

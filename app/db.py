@@ -79,19 +79,22 @@ def create_entry(permitted_user_ids, private):
     #   * text only
     #   * image only
     #   * text and image
-    from models import FileWrapper
+    from models import FileWrapper, MAX_CONTENT_LENGTH
+
+    def shorten(data):
+        return (data[:MAX_CONTENT_LENGTH] + '..') if len(data) > MAX_CONTENT_LENGTH else data
 
     post_type = random.randint(0, 2)
     sample_images = ['panda.jpg', 'icon.pNg', 'panda.png', 'panda.jpeg']
 
     if post_type == 0:
-        sentence = ' '.join(get_sentences(random.randint(1, 4)))
+        sentence = shorten(' '.join(get_sentences(random.randint(1, 4))))
         image = None
     elif post_type == 1:
         sentence = ''
         image = random.choice(sample_images)
     else:
-        sentence = ' '.join(get_sentences(random.randint(1, 4)))
+        sentence = shorten(' '.join(get_sentences(random.randint(1, 4))))
         image = random.choice(sample_images)
 
     filename = None

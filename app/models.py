@@ -12,6 +12,9 @@ from app import app
 from os import path
 
 
+MAX_CONTENT_LENGTH = 4*140
+
+
 class User:
     # int id (Primary key)
     # str username
@@ -157,7 +160,7 @@ class Post:
 
     @staticmethod
     def get_all():
-        result = query_db('SELECT * from Posts')
+        result = query_db('SELECT * from Posts ORDER BY timestamp DESC')
         posts = []
         for r in result:
             posts.append(Post(r['author_id'], r['content'], r['attachment_name'], r['timestamp']))
@@ -173,6 +176,8 @@ class Post:
 
     @staticmethod
     def create(author_id, content, attachment_name):
+        if len(content) > MAX_CONTENT_LENGTH:
+            return None
         result = insert_db('INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [author_id, content, attachment_name, int(time.time())])
         if not result:
             return None
@@ -194,7 +199,7 @@ class Message:
 
     @staticmethod
     def get_messages_for_user_id(user_id):
-        result = query_db('SELECT * from Messages WHERE recipient_id = ? OR author_id = ?', [user_id, user_id])
+        result = query_db('SELECT * from Messages WHERE recipient_id = ? OR author_id = ? ORDER BY timestamp DESC', [user_id, user_id])
         messages = []
         for r in result:
             messages.append(Message(r['author_id'], r['recipient_id'], r['content'], r['filename'], r['timestamp']))
@@ -202,6 +207,8 @@ class Message:
 
     @staticmethod
     def create(author_id, recipient_id, content, filename=None):
+        if len(content) > MAX_CONTENT_LENGTH:
+            return None
         result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [author_id, recipient_id, content, filename, int(time.time())])
         if not result:
             return None
