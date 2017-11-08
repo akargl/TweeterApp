@@ -301,7 +301,7 @@ def test_post_wrong_file_format(client):
         post_content='My new Post'
     ))
     assert response.status_code == 200
-    assert b'Invalid file type' in response.data
+    assert b'Malformed image' in response.data
 
 
 def test_post_no_content_given(client):

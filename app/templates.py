@@ -20,7 +20,8 @@ class TemplateManager(object):
         unsafe = unsafe.replace(">", "&gt;")
         unsafe = unsafe.replace("\"", "&quot;")
         unsafe = unsafe.replace("'", "&#x27;")
-        return unsafe.replace("/", "&#x2F;")
+        unsafe = unsafe.replace("/", "&#x2F;")
+        return unsafe
 
     @staticmethod
     def get_register_template(errors=[]):
@@ -61,8 +62,8 @@ class TemplateManager(object):
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
-        max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
-        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS']), 'csrf_token' : g.get('csrf_token', '')})
+        max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "MB"
+        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, 'csrf_token' : g.get('csrf_token', '')})
 
         posts_content = ""
         for p in posts:
@@ -70,9 +71,30 @@ class TemplateManager(object):
             author_user = User.get_user_by_id(p.author_id)
             author_name = author_user.username if author_user is not None else "[Deleted]"
             escaped_author_name = TemplateManager.escape_for_html_element_context(author_name)
-            app.logger.debug(p.attachment_name)
-            post_image_src = "/api/files/{:s}".format(p.attachment_name) if p.attachment_name is not None else ""
-            post_content = TemplateManager.get_template("post-template", {"post_author" : escaped_author_name, "post_text" : escaped_content, "post_image_src" : post_image_src, "post_image_display" : "" if p.attachment_name else "none", "post_time" : datetime.datetime.fromtimestamp(p.timestamp)})
+
+            if not p.has_file():
+                post_content = TemplateManager.get_template("post-plain-template",
+                  {"post_author" : escaped_author_name,
+                   "post_text" : escaped_content,
+                   "post_time" : datetime.datetime.fromtimestamp(p.timestamp)}
+                )
+            else:
+                post_file_src = "/api/files/{:s}".format(p.attachment_name)
+
+                if p.is_image():
+                    post_content = TemplateManager.get_template("post-image-template",
+                      {"post_author" : escaped_author_name,
+                       "post_text" : escaped_content,
+                       "post_image_src" : post_file_src,
+                       "post_time" : datetime.datetime.fromtimestamp(p.timestamp)}
+                    )
+                else:
+                    post_content = TemplateManager.get_template("post-link-template",
+                      {"post_author" : escaped_author_name,
+                       "post_text" : escaped_content,
+                       "post_file_src" : post_file_src,
+                       "post_time" : datetime.datetime.fromtimestamp(p.timestamp)}
+                    )
             posts_content += post_content + "\n"
 
 
@@ -94,8 +116,8 @@ class TemplateManager(object):
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
-        max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "mb"
-        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, "permitted_filetypes" : ", ".join(app.config['ALLOWED_EXTENSIONS']), 'csrf_token' : g.get('csrf_token', '')})
+        max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "MB"
+        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, 'csrf_token' : g.get('csrf_token', '')})
 
         messages_content = ""
         for m in messages:
@@ -109,8 +131,32 @@ class TemplateManager(object):
             recipient_name = recipient_user.username if recipient_user is not None else "[Deleted]"
             escaped_recipient_name = TemplateManager.escape_for_html_element_context(recipient_name)
 
-            message_image_src = "/api/files/{:s}".format(m.filename) if m.filename else ""
-            message_content = TemplateManager.get_template("message-template", {"message_author" : escaped_author_name, "message_recipient" : escaped_recipient_name, "message_text" : escaped_content, "message_image_src" : message_image_src, "message_image_display" : "" if m.filename else "none", "message_time" : datetime.datetime.fromtimestamp(m.timestamp)})
+            message_content = ""
+            if not m.has_file():
+                message_content = TemplateManager.get_template("message-plain-template",
+                  {"message_author" : escaped_author_name,
+                   "message_recipient" : escaped_recipient_name,
+                   "message_text" : escaped_content,
+                   "message_time" : datetime.datetime.fromtimestamp(m.timestamp)}
+                )
+            else:
+                message_file_src = "/api/files/{:s}".format(m.attachment_name)
+                if m.is_image():
+                    message_content = TemplateManager.get_template("message-image-template",
+                      {"message_author" : escaped_author_name,
+                       "message_recipient" : escaped_recipient_name,
+                       "message_text" : escaped_content,
+                       "message_image_src" : message_file_src,
+                       "message_time" : datetime.datetime.fromtimestamp(m.timestamp)}
+                     )
+                else:
+                    message_content = TemplateManager.get_template("message-link-template",
+                      {"message_author" : escaped_author_name,
+                       "message_recipient" : escaped_recipient_name,
+                       "message_text" : escaped_content,
+                       "message_file_src" : message_file_src,
+                       "message_time" : datetime.datetime.fromtimestamp(m.timestamp)}
+                    )
             messages_content += message_content + "\n"
 
 
@@ -264,10 +310,20 @@ class TemplateManager(object):
 </form>
     """,
 
-    "post-template" :
+    "post-plain-template" :
     """
 <div class="card">
-    <a href="${post_image_src}" style="display: ${post_image_display};">
+    <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author} at ${post_time}</h6>
+        <p class="card-text">${post_text}</p>
+    </div>
+</div>
+    """,
+
+    "post-image-template" :
+    """
+<div class="card">
+    <a href="${post_image_src}" style="display: "";">
         <img class="card-img-top" src="${post_image_src}" style="max-height: 300px; object-fit: contain;">
     </a>
     <div class="card-body">
@@ -277,15 +333,47 @@ class TemplateManager(object):
 </div>
     """,
 
-    "message-template" :
+    "post-link-template" :
     """
 <div class="card">
-    <a href="${message_image_src}" style="display: ${message_image_display};">
+    <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author} at ${post_time}</h6>
+        <p class="card-text">${post_text}</p>
+        <a href="${post_file_src}">Attachment</a>
+    </div>
+</div>
+    """,
+
+    "message-plain-template" :
+    """
+<div class="card">
+    <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Sent by ${message_author} to ${message_recipient} at ${message_time}</h6>
+        <p class="card-text">${message_text}</p>
+    </div>
+</div>
+    """,
+
+    "message-image-template" :
+    """
+<div class="card">
+    <a href="${message_image_src}" style="display: "";">
         <img class="card-img-top" src="${message_image_src}" style="max-height: 300px; object-fit: contain;">
     </a>
     <div class="card-body">
         <h6 class="card-subtitle mb-2 text-muted">Sent by ${message_author} to ${message_recipient} at ${message_time}</h6>
         <p class="card-text">${message_text}</p>
+    </div>
+</div>
+    """,
+
+    "message-link-template" :
+    """
+<div class="card">
+    <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Sent by ${message_author} to ${message_recipient} at ${message_time}</h6>
+        <p class="card-text">${message_text}</p>
+        <a href="${message_file_src}">Attachment</a>
     </div>
 </div>
     """,
@@ -306,7 +394,7 @@ class TemplateManager(object):
                 <div class="col-auto">
                     <label for="attachment">Attachment</label>
                     <input type="file" class="form-control-file" id="attachment" name="attachment" aria-describedby="attachmentHelp">
-                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}. Only ${permitted_filetypes} files.</small>
+                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}.</small>
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary">Submit</button>
@@ -337,7 +425,7 @@ class TemplateManager(object):
                 <div class="col-auto">
                     <label for="attachment">Attachment</label>
                     <input type="file" class="form-control-file" id="attachment" name="attachment" aria-describedby="attachmentHelp">
-                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}. Only ${permitted_filetypes} files.</small>
+                    <small id="attachmentHelp" class="form-text text-muted">Max ${max_attachment_size}.</small>
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary">Submit</button>
