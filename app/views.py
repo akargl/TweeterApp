@@ -45,18 +45,18 @@ def index():
         post_content = request.form['post_content'].strip()
         posts = Post.get_all()
 
-        imgfile = request.files.get('attachment')
-        if imgfile:
-            errors = FileWrapper.is_valid_file(imgfile)
+        attachment = request.files.get('attachment')
+        if attachment:
+            errors = FileWrapper.is_valid_file(attachment)
             if len(errors):
                 return TemplateManager.get_index_template(posts, errors)
 
-        if post_content == "" and (imgfile is None or (imgfile is not None and imgfile.filename == '')):
+        if post_content == "" and (attachment is None or (attachment is not None and attachment.filename == '')):
             return TemplateManager.get_index_template(posts, ["Post can't be empty"])
 
         filename = None
-        if imgfile:
-            wrapper = FileWrapper.create(imgfile, [g.user.id], False)
+        if attachment:
+            wrapper = FileWrapper.create(attachment, [g.user.id], False)
             if not wrapper:
                 return TemplateManager.get_index_template(posts, ['Could not upload file'])
             filename = wrapper.get_filename()
@@ -175,17 +175,17 @@ def messages():
         if not recipient:
             return TemplateManager.get_messages_template(messages, ["Unknown recipient"])
 
-        imgfile = request.files.get('attachment')
-        if imgfile:
-            errors = FileWrapper.is_valid_file(imgfile)
+        attachment = request.files.get('attachment')
+        if attachment:
+            errors = FileWrapper.is_valid_file(attachment)
             if len(errors):
                 return TemplateManager.get_messages_template(messages, errors)
-        if message_content == "" and (imgfile is None or (imgfile is not None and imgfile.filename == '')):
+        if message_content == "" and (attachment is None or (attachment is not None and attachment.filename == '')):
             return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
 
         filename = None
-        if imgfile:
-            wrapper = FileWrapper.create(imgfile, [g.user.id, recipient.id], True)
+        if attachment:
+            wrapper = FileWrapper.create(attachment, [g.user.id, recipient.id], True)
             if not wrapper:
                 return TemplateManager.get_index_template(posts, ['Could not upload file'])
             filename = wrapper.get_filename()

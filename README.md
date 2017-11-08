@@ -1,6 +1,7 @@
 # Tweeter
 
-Tweeter is a simple microblogging app. Users can share text and image files (.png, .jpg, .jpeg) with either a single or all registered users.
+Tweeter is a simple microblogging app. Users can share text and files semi-publically with all other registrated and authenticated users or privatly between another user.
+Images (.png, .jpg, .jpeg) are rendered directly. Other files are rendered as links.
 Administrators can delete users and grant them administration priviliges.
 
 ## API

@@ -149,6 +149,15 @@ class Post:
         self.attachment_name = attachment_name
         self.timestamp = timestamp
 
+    def has_file(self):
+        return self.attachment_name is not None
+
+    def is_image(self):
+        if not self.attachment_name:
+            return False
+        file_extension = path.splitext(self.attachment_name)[1]
+        return file_extension.lower() in app.config['ALLOWED_EXTENSIONS']
+
     @staticmethod
     def get_posts_by_user_id(user_id):
         result = query_db('SELECT * from Posts WHERE author_id = ?', [user_id])
@@ -189,12 +198,21 @@ class Message:
     # int recipient_id -> User.id
     # str Content
     # str filename
-    def __init__(self, author_id, recipient_id, content, filename, timestamp):
+    def __init__(self, author_id, recipient_id, content, attachment_name, timestamp):
         self.author_id = author_id
         self.recipient_id = recipient_id
         self.content = content
-        self.filename = filename
+        self.attachment_name = attachment_name
         self.timestamp = timestamp
+
+    def has_file(self):
+        return self.attachment_name is not None
+
+    def is_image(self):
+        if not self.attachment_name:
+            return False
+        file_extension = path.splitext(self.attachment_name)[1]
+        return file_extension.lower() in app.config['ALLOWED_EXTENSIONS']
 
     @staticmethod
     def get_messages_for_user_id(user_id):
@@ -205,10 +223,10 @@ class Message:
         return messages
 
     @staticmethod
-    def create(author_id, recipient_id, content, filename=None):
+    def create(author_id, recipient_id, content, attachment_name=None):
         if len(content) > MAX_CONTENT_LENGTH:
             return None
-        result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [author_id, recipient_id, content, filename, int(time.time())])
+        result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [author_id, recipient_id, content, attachment_name, int(time.time())])
         if not result:
             return None
         return True
@@ -291,17 +309,17 @@ class FileWrapper:
         }
 
     @staticmethod
-    def is_valid_file(imgfile):
-        file_extension = path.splitext(imgfile.filename)[1]
+    def is_valid_file(attachment):
+        # TODO: Check if file is a symlink
+        file_extension = path.splitext(attachment.filename)[1]
         app.logger.debug("file_extension is" + file_extension)
-        if file_extension.lower() not in app.config['ALLOWED_EXTENSIONS']:
-            return ['Invalid file extension']
-
-        imgfile.seek(0)
-        imghdr_type = imghdr.what(None, imgfile.read())
-        if "." + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
-            return ['Invalid file type']
-        imgfile.seek(0)
+        if file_extension.lower() in app.config['ALLOWED_EXTENSIONS']:
+            # If we have an image extension, check if it is really in image
+            attachment.seek(0)
+            imghdr_type = imghdr.what(None, attachment.read())
+            attachment.seek(0)
+            if '.' + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
+                return ['Malformed image']
         return []
 
     @staticmethod
