@@ -275,6 +275,18 @@ def test_post_content_and_file(client):
     assert b'/api/files/1.png' in response.data
 
 
+def test_post_non_image_file(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        {'attachment': (StringIO('my file'), 'foo.bar')},
+        post_content='My binary post'
+    ))
+    assert response.status_code == 201
+    assert b'My binary post' in response.data
+    assert b'/api/files/1.bar' in response.data
+
+
 def test_post_twice_same_data(client):
     login(client, 'root', 'root')
 
@@ -333,6 +345,45 @@ def test_send_message(client):
     messages = models.Message.get_messages_for_user_id(2)
     assert len(messages) == 2
     assert messages[1].content == 'My new message'
+
+
+def test_send_message_content_and_file(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages', data=dict(
+        {'attachment': (read_file('test_data/panda.png'), 'panda.png')},
+        message_recipient="foo",
+        message_content="My binary message"
+    ))
+
+    assert response.status_code == 201
+    assert b'My binary message' in response.data
+    assert b'/api/files/1.png' in response.data
+
+
+def test_send_message_non_image_file(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/messages', data=dict(
+        {'attachment': (StringIO('my file'), 'foo.bar')},
+        message_recipient="foo",
+        message_content="My binary message"
+    ))
+
+    assert response.status_code == 201
+    assert b'My binary message' in response.data
+    assert b'/api/files/1.bar' in response.data
+
+
+def test_send_message_wrong_file_format(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/', data=dict(
+        {'attachment': (StringIO('my file'), 'panda.png')},
+        post_content='My new Post'
+    ))
+    assert response.status_code == 200
+    assert b'Malformed image' in response.data
 
 
 def test_send_message_no_params(client):
