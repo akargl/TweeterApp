@@ -213,6 +213,9 @@ def user(id):
     if not user:
         abort(httplib.NOT_FOUND)
 
+    if user.is_admin:
+        abort(httplib.UNAUTHORIZED)
+
     if request.method == 'PUT':
         is_admin = request.form['is_admin'] == "1"
         status = user.change_role(is_admin)
