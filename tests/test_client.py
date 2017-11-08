@@ -463,7 +463,6 @@ def test_api_get_users(client):
     assert response.status_code == 200
     assert response.content_type == 'application/json'
     data = json.loads(response.get_data())
-    print data
     assert len(data) == 2
     assert data[0]['id'] == 1
     assert data[0]['username'] == 'root'

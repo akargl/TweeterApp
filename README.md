@@ -1,64 +1,60 @@
 # Tweeter
 
-Tweeter is a simple microblogging app. Users can share text and image files (.png, .jpg, .jpeg) with either a single or all registered users. Administrators can delete users and grant them administration priviliges.
+Tweeter is a simple microblogging app. Users can share text and image files (.png, .jpg, .jpeg) with either a single or all registered users.
+Administrators can delete users and grant them administration priviliges.
 
 ## API
 
-To use the API authentication either via a session cookie issued on login (*/login*) or HTTP Basic authentication is necessary.
+Tweeter has an inbuilt API. To access the API, authentication via HTTP Basic authentication (username and password) or via the session session cookie is necessary. The session cookie is issued on `/login`.
 
 The following endpoints are available:
 
-* GET */api/files*
+* `GET /api/files`
 
-  Returns a json list with the names of all accessible files for the current user
+  Returns a json list with the names of all accessible files for the current user.
 
-* GET */api/files/\<filename\>*
+* `GET /api/files/\<filename\>`
 
-  Retrieve the specified file if accessible by the current user
+  Retrieve the specified file if accessible by the current user.
 
-* GET */api/users*
+* `GET /api/users`
 
-  Requires administrative privilegies. Returns a list of all registered user with their id, name and administrator status respectivley.
+  Requires administrative privilegies. Returns a list of all registered user with their id, name, and administrator status respectivley.
 
-## Startup
+## Deployment
 
-* ### using Docker
+## Using Docker
 
-    Assuming *docker* and *docker-compose* are already installed, the app can simply be started with:
+Assuming `docker` and `docker-compose` are already installed, the app can simply be started with:
 
-    ```sh
-    docker-compose up
-    ```
+```bash
+docker-compose up
+```
 
-* ### without Docker
+When building the image, the database is initialized and seeded with the sample content.
 
-    Assuming that *python 2.7* and *pip* are already installed. Optionally use *virtualenv* to create a new environment as well.
+## Native Deployment without Docker
 
-    The following sequence of commands installs the needed requirements, sets the flask application, and starts the application.
+Assuming that `python 2.7` and `pip` are already installed. Optionally use `virtualenv` to create a new environment as well.
 
-    ```sh
-    pip install -r requirements.txt
-    export FLASK_APP=run.py
-    flask run
-    ```
+The following sequence of commands installs the needed requirements and sets the flask application
 
-Now the app will run on port 5000.
+```bash
+pip install -r requirements.txt
+export FLASK_APP=run.py
+```
 
-## Initial setup
+Before the first start of the application, the database needs to be initialized and optionally seeded.
 
-Set up or reset the database:
+### Initialize Database
 
-```sh
+Set up or reset the database by invoking the following command in the root folder of the application. *This command will delete all content of the database.*
+
+```bash
 flask initdb
 ```
 
-Initializes the database with some users, posts, and messages including image uploads:
-
-```sh
-flask seeddb
-```
-
-The users created are:
+The following users created are:
 
 | Name   | Password            | Administrator |
 |--------|---------------------|---------------|
@@ -68,3 +64,21 @@ The users created are:
 | Alex   | alex_password_123   | no            |
 | Robert | robert_password_123 | no            |
 | Anna   | anna_password_123   | no            |
+
+### Seed Database
+
+Initializes the database with some users, posts, and messages including image uploads. Execute the following command in the root folder of the application. *This command will delete all content of the database.*
+
+```bash
+flask seeddb
+```
+
+### Start the Application
+
+To start the application, run the following command in the root folder of the application.
+
+```bash
+flask run
+```
+
+Now the app will run on port 5000. Open a webbrowser and visit `localhost:5000`.
