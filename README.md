@@ -13,7 +13,7 @@ The following endpoints are available:
 
   Returns a json list with the names of all accessible files for the current user.
 
-* `GET /api/files/\<filename\>`
+* `GET /api/files/<filename>`
 
   Retrieve the specified file if accessible by the current user.
 
