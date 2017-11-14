@@ -45,12 +45,14 @@ class User:
         """ Checks against the password policy """
         errors = []
         if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
-            errors.append('Length of username invalid. Maximum length: {:d}'.format(
-                User.MAX_USERNAME_LEN))
+            errors.append(
+                'Length of username invalid. Maximum length: {:d}'.format(
+                    User.MAX_USERNAME_LEN))
         if len(password) < User.MIN_PASSWORD_LEN or len(
                 password) > User.MAX_PASSWORD_LEN:
-            errors.append('Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(
-                User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
+            errors.append(
+                'Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(
+                    User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
         if not re.match("^[A-Za-z0-9_-]*$", username):
             errors.append(
                 'Username must only contain letters, numbers, and underscores')
@@ -99,7 +101,9 @@ class User:
     @staticmethod
     def get_user_by_name(username):
         user_data = query_db(
-            'SELECT * from Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
+            'SELECT * from Users WHERE LOWER(username) = LOWER(?)',
+            [username],
+            one=True)
         if user_data is None:
             return None
         return User(user_data['id'], user_data[
@@ -108,7 +112,9 @@ class User:
     @staticmethod
     def get_and_validate_user(username, hashed_password):
         user_data = query_db(
-            'SELECT * FROM Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
+            'SELECT * FROM Users WHERE LOWER(username) = LOWER(?)',
+            [username],
+            one=True)
         if user_data is None:
             return None
         if not User.password_compare(
@@ -119,8 +125,10 @@ class User:
 
     @staticmethod
     def get_salt(username):
-        salt = query_db('SELECT password_salt FROM Users WHERE LOWER(username) = LOWER(?)', [
-                        username], one=True)
+        salt = query_db(
+            'SELECT password_salt FROM Users WHERE LOWER(username) = LOWER(?)',
+            [username],
+            one=True)
         if salt is None:
             return None
         return salt['password_salt']
@@ -132,8 +140,9 @@ class User:
         if User.get_user_by_name(username):
             app.logger.debug("User already exists")
             return None
-        result = insert_db('INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [
-                           username, salt, hashed_password, int(is_admin)])
+        result = insert_db(
+            'INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [
+                username, salt, hashed_password, int(is_admin)])
         if not result:
             return None
         return User.get_user_by_name(username)
@@ -207,8 +216,10 @@ class Post:
     def create(author_id, content, attachment_name):
         if len(content) > MAX_CONTENT_LENGTH:
             return None
-        result = insert_db('INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [
-                           author_id, content, attachment_name, int(time.time())])
+        result = insert_db(
+            'INSERT into Posts (author_id, content, attachment_name, timestamp) VALUES (?, ?, ?, ?)', [
+                author_id, content, attachment_name, int(
+                    time.time())])
         if not result:
             return None
         return True
@@ -241,7 +252,10 @@ class Message:
     @staticmethod
     def get_messages_for_user_id(user_id):
         result = query_db(
-            'SELECT * from Messages WHERE recipient_id = ? OR author_id = ? ORDER BY timestamp DESC', [user_id, user_id])
+            'SELECT * from Messages WHERE recipient_id = ? OR author_id = ? ORDER BY timestamp DESC',
+            [
+                user_id,
+                user_id])
         messages = []
         for r in result:
             messages.append(Message(r['author_id'], r['recipient_id'], r[
@@ -252,8 +266,10 @@ class Message:
     def create(author_id, recipient_id, content, attachment_name=None):
         if len(content) > MAX_CONTENT_LENGTH:
             return None
-        result = insert_db('INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [
-                           author_id, recipient_id, content, attachment_name, int(time.time())])
+        result = insert_db(
+            'INSERT into Messages (author_id, recipient_id, content, filename, timestamp) VALUES (?, ?, ?, ?, ?)', [
+                author_id, recipient_id, content, attachment_name, int(
+                    time.time())])
         if not result:
             return None
         return True
@@ -275,8 +291,10 @@ class Session:
     @staticmethod
     def active_user(session_token):
         app.logger.debug("Get active user")
-        data = query_db('SELECT user_id, csrf_token from Sessions WHERE session_token = ?', [
-                        session_token], one=True)
+        data = query_db(
+            'SELECT user_id, csrf_token from Sessions WHERE session_token = ?',
+            [session_token],
+            one=True)
         if data is None:
             return None, None
 
@@ -305,14 +323,16 @@ class Session:
         csrf_token = b64encode(session_token).decode('utf-8')
         csrf_token = signer.dumps(csrf_token)
 
-        result = insert_db('INSERT INTO Sessions (session_token, user_id, csrf_token) Values (?, ?, ?)', [
-                           session_token, user.id, csrf_token])
+        result = insert_db(
+            'INSERT INTO Sessions (session_token, user_id, csrf_token) Values (?, ?, ?)', [
+                session_token, user.id, csrf_token])
         return result, session_token, csrf_token
 
     @staticmethod
     def delete(user_id, session_token):
-        insert_db('DELETE FROM Sessions WHERE user_id = ? AND session_token = ?', [
-                  user_id, session_token])
+        insert_db(
+            'DELETE FROM Sessions WHERE user_id = ? AND session_token = ?', [
+                user_id, session_token])
 
     @staticmethod
     def delete_all(user_id):
@@ -357,7 +377,8 @@ class FileWrapper:
     @staticmethod
     def get_files(user_id):
         file_data = query_db(
-            'SELECT * FROM Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (permission.user_id = ? or file.private=0)', [user_id])
+            'SELECT * FROM Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (permission.user_id = ? or file.private=0)',
+            [user_id])
         if not file_data:
             return []
 
@@ -370,7 +391,11 @@ class FileWrapper:
     @staticmethod
     def get_by_filename(filename, user_id):
         file_data = query_db(
-            'SELECT * from Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (id || extension = ? and (permission.user_id = ? or file.private=0))', [filename, user_id], one=True)
+            'SELECT * from Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (id || extension = ? and (permission.user_id = ? or file.private=0))',
+            [
+                filename,
+                user_id],
+            one=True)
         if not file_data:
             return None
 
@@ -385,13 +410,15 @@ class FileWrapper:
             return None
 
         f_ext = path.splitext(imgfile.filename)[1]
-        file_id = insert_db('INSERT into Files (extension, private) VALUES (?, ?)', [
-                            f_ext, bool(private)])
+        file_id = insert_db(
+            'INSERT into Files (extension, private) VALUES (?, ?)', [
+                f_ext, bool(private)])
         if not file_id:
             return None
         for user_id in permitted_user_ids:
             status = insert_db(
-                'INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [file_id, user_id])
+                'INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [
+                    file_id, user_id])
             if not status:
                 # TODO: Rollback??
                 return None

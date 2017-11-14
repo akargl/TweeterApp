@@ -79,8 +79,15 @@ class TemplateManager(object):
 
         max_attachment_size = str(
             app.config['MAX_CONTENT_LENGTH'] / 1024 / 1024) + "MB"
-        post_form = TemplateManager.get_template("post-form-template", {"username": escaped_username, "form_target": url_for(
-            'index'), "max_attachment_size": max_attachment_size, 'csrf_token': g.get('csrf_token', '')})
+        post_form = TemplateManager.get_template(
+            "post-form-template",
+            {
+                "username": escaped_username,
+                "form_target": url_for('index'),
+                "max_attachment_size": max_attachment_size,
+                'csrf_token': g.get(
+                    'csrf_token',
+                    '')})
 
         posts_content = ""
         for p in posts:
@@ -92,34 +99,49 @@ class TemplateManager(object):
                 author_name)
 
             if not p.has_file():
-                post_content = TemplateManager.get_template("post-plain-template",
-                                                            {"post_author": escaped_author_name,
-                                                             "post_text": escaped_content,
-                                                             "post_time": datetime.datetime.fromtimestamp(p.timestamp)}
-                                                            )
+                post_content = TemplateManager.get_template(
+                    "post-plain-template",
+                    {
+                        "post_author": escaped_author_name,
+                        "post_text": escaped_content,
+                        "post_time": datetime.datetime.fromtimestamp(
+                            p.timestamp)})
             else:
                 post_file_src = "/api/files/{:s}".format(p.attachment_name)
 
                 if p.is_image():
-                    post_content = TemplateManager.get_template("post-image-template",
-                                                                {"post_author": escaped_author_name,
-                                                                 "post_text": escaped_content,
-                                                                 "post_image_src": post_file_src,
-                                                                 "post_time": datetime.datetime.fromtimestamp(p.timestamp)}
-                                                                )
+                    post_content = TemplateManager.get_template(
+                        "post-image-template",
+                        {
+                            "post_author": escaped_author_name,
+                            "post_text": escaped_content,
+                            "post_image_src": post_file_src,
+                            "post_time": datetime.datetime.fromtimestamp(
+                                p.timestamp)})
                 else:
-                    post_content = TemplateManager.get_template("post-link-template",
-                                                                {"post_author": escaped_author_name,
-                                                                 "post_text": escaped_content,
-                                                                 "post_file_src": post_file_src,
-                                                                 "post_time": datetime.datetime.fromtimestamp(p.timestamp)}
-                                                                )
+                    post_content = TemplateManager.get_template(
+                        "post-link-template",
+                        {
+                            "post_author": escaped_author_name,
+                            "post_text": escaped_content,
+                            "post_file_src": post_file_src,
+                            "post_time": datetime.datetime.fromtimestamp(
+                                p.timestamp)})
             posts_content += post_content + "\n"
 
         main_content = alerts + post_form + posts_content
 
-        main_template = TemplateManager.get_template("main-template", {"main_title": "Posts", "main_content": main_content,
-                                                                       "user_menu_display": "", "nav_items": nav_links, "username": escaped_username, 'csrf_token': g.get('csrf_token', '')})
+        main_template = TemplateManager.get_template(
+            "main-template",
+            {
+                "main_title": "Posts",
+                "main_content": main_content,
+                "user_menu_display": "",
+                "nav_items": nav_links,
+                "username": escaped_username,
+                'csrf_token': g.get(
+                    'csrf_token',
+                    '')})
 
         return main_template
 
@@ -141,8 +163,15 @@ class TemplateManager(object):
 
         max_attachment_size = str(
             app.config['MAX_CONTENT_LENGTH'] / 1024 / 1024) + "MB"
-        message_form = TemplateManager.get_template("message-form-template", {"username": escaped_username, "form_target": url_for(
-            'messages'), "max_attachment_size": max_attachment_size, 'csrf_token': g.get('csrf_token', '')})
+        message_form = TemplateManager.get_template(
+            "message-form-template",
+            {
+                "username": escaped_username,
+                "form_target": url_for('messages'),
+                "max_attachment_size": max_attachment_size,
+                'csrf_token': g.get(
+                    'csrf_token',
+                    '')})
 
         messages_content = ""
         for m in messages:
@@ -161,36 +190,48 @@ class TemplateManager(object):
 
             message_content = ""
             if not m.has_file():
-                message_content = TemplateManager.get_template("message-plain-template",
-                                                               {"message_author": escaped_author_name,
-                                                                "message_recipient": escaped_recipient_name,
-                                                                "message_text": escaped_content,
-                                                                "message_time": datetime.datetime.fromtimestamp(m.timestamp)}
-                                                               )
+                message_content = TemplateManager.get_template(
+                    "message-plain-template",
+                    {
+                        "message_author": escaped_author_name,
+                        "message_recipient": escaped_recipient_name,
+                        "message_text": escaped_content,
+                        "message_time": datetime.datetime.fromtimestamp(
+                            m.timestamp)})
             else:
                 message_file_src = "/api/files/{:s}".format(m.attachment_name)
                 if m.is_image():
-                    message_content = TemplateManager.get_template("message-image-template",
-                                                                   {"message_author": escaped_author_name,
-                                                                    "message_recipient": escaped_recipient_name,
-                                                                    "message_text": escaped_content,
-                                                                    "message_image_src": message_file_src,
-                                                                    "message_time": datetime.datetime.fromtimestamp(m.timestamp)}
-                                                                   )
+                    message_content = TemplateManager.get_template(
+                        "message-image-template",
+                        {
+                            "message_author": escaped_author_name,
+                            "message_recipient": escaped_recipient_name,
+                            "message_text": escaped_content,
+                            "message_image_src": message_file_src,
+                            "message_time": datetime.datetime.fromtimestamp(
+                                m.timestamp)})
                 else:
-                    message_content = TemplateManager.get_template("message-link-template",
-                                                                   {"message_author": escaped_author_name,
-                                                                    "message_recipient": escaped_recipient_name,
-                                                                    "message_text": escaped_content,
-                                                                    "message_file_src": message_file_src,
-                                                                    "message_time": datetime.datetime.fromtimestamp(m.timestamp)}
-                                                                   )
+                    message_content = TemplateManager.get_template(
+                        "message-link-template",
+                        {
+                            "message_author": escaped_author_name,
+                            "message_recipient": escaped_recipient_name,
+                            "message_text": escaped_content,
+                            "message_file_src": message_file_src,
+                            "message_time": datetime.datetime.fromtimestamp(
+                                m.timestamp)})
             messages_content += message_content + "\n"
 
         main_content = alerts + message_form + messages_content
 
         main_template = TemplateManager.get_template(
-            "main-template", {"main_title": "Messages", "main_content": main_content, "user_menu_display": "", "nav_items": nav_links, "username": escaped_username})
+            "main-template",
+            {
+                "main_title": "Messages",
+                "main_content": main_content,
+                "user_menu_display": "",
+                "nav_items": nav_links,
+                "username": escaped_username})
 
         return main_template
 
@@ -201,8 +242,18 @@ class TemplateManager(object):
         escaped_username = TemplateManager.escape_for_html_element_context(
             g.user.username)
 
-        nav_links = "\n".join([TemplateManager.generate_nav_link("Home", "/"), TemplateManager.generate_nav_link(
-            "Messages", "messages"), TemplateManager.generate_nav_link("Administration", "administration", active=True)])
+        nav_links = "\n".join(
+            [
+                TemplateManager.generate_nav_link(
+                    "Home",
+                    "/"),
+                TemplateManager.generate_nav_link(
+                    "Messages",
+                    "messages"),
+                TemplateManager.generate_nav_link(
+                    "Administration",
+                    "administration",
+                    active=True)])
 
         alerts = "\n".join(TemplateManager.get_template(
             "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
@@ -210,26 +261,55 @@ class TemplateManager(object):
         user_list_group = ""
         for u in users:
             if u.is_admin:
-                user_list_group += TemplateManager.get_template("administration-user-template", {"user_name": TemplateManager.escape_for_html_element_context(u.username), "group_badges": TemplateManager.get_template(
-                    "administration-user-group-badge", {"group_name": "Admin"}), "user_id": u.id, "promote_button_display": "none", "delete_button_display": "none"})
+                user_list_group += TemplateManager.get_template(
+                    "administration-user-template",
+                    {
+                        "user_name": TemplateManager.escape_for_html_element_context(
+                            u.username),
+                        "group_badges": TemplateManager.get_template(
+                            "administration-user-group-badge",
+                            {
+                                "group_name": "Admin"}),
+                        "user_id": u.id,
+                        "promote_button_display": "none",
+                        "delete_button_display": "none"})
             else:
-                user_list_group += TemplateManager.get_template("administration-user-template", {"user_name": TemplateManager.escape_for_html_element_context(
-                    u.username), "group_badges": "", "user_id": u.id, "promote_button_display": "", "delete_button_display": ""})
+                user_list_group += TemplateManager.get_template(
+                    "administration-user-template",
+                    {
+                        "user_name": TemplateManager.escape_for_html_element_context(
+                            u.username),
+                        "group_badges": "",
+                        "user_id": u.id,
+                        "promote_button_display": "",
+                        "delete_button_display": ""})
 
-        admin_main = TemplateManager.get_template("administration-main-template", {
-                                                  "user_list_group": user_list_group, 'csrf_token': g.get('csrf_token', '')})
+        admin_main = TemplateManager.get_template(
+            "administration-main-template", {
+                "user_list_group": user_list_group, 'csrf_token': g.get(
+                    'csrf_token', '')})
 
         main_content = alerts + admin_main
 
         main_template = TemplateManager.get_template(
-            "main-template", {"main_title": "Administration", "main_content": main_content, "user_menu_display": "", "nav_items": nav_links, "username": escaped_username})
+            "main-template",
+            {
+                "main_title": "Administration",
+                "main_content": main_content,
+                "user_menu_display": "",
+                "nav_items": nav_links,
+                "username": escaped_username})
 
         return main_template
 
     @staticmethod
     def generate_nav_link(text, target, active=False):
         return TemplateManager.get_template(
-            "nav-link-template", {"nav_target": target, "nav_text": text, "nav_active": "active" if active else ""})
+            "nav-link-template",
+            {
+                "nav_target": target,
+                "nav_text": text,
+                "nav_active": "active" if active else ""})
 
     @staticmethod
     def get_template(template_name, substitutions):
