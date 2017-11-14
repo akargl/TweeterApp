@@ -27,7 +27,7 @@ class TemplateManager(object):
     def get_register_template(errors=[]):
         escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
 
-        register_template = TemplateManager.get_template("register-template", {"form_target" : url_for('register'), "form_method" : "POST"})
+        register_template = TemplateManager.get_template("register-template", {"form_target" : url_for('register')})
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
@@ -41,7 +41,7 @@ class TemplateManager(object):
     def get_login_template(errors=[]):
         escaped_errors = [TemplateManager.escape_for_html_element_context(e) for e in errors]
 
-        login_template = TemplateManager.get_template("login-template", {"form_target" : url_for('login'), "form_method" : "POST"})
+        login_template = TemplateManager.get_template("login-template", {"form_target" : url_for('login')})
 
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
@@ -63,7 +63,7 @@ class TemplateManager(object):
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "MB"
-        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, 'csrf_token' : g.get('csrf_token', '')})
+        post_form = TemplateManager.get_template("post-form-template", {"username" : escaped_username, "form_target" : url_for('index'), "max_attachment_size" : max_attachment_size, 'csrf_token' : g.get('csrf_token', '')})
 
         posts_content = ""
         for p in posts:
@@ -117,7 +117,7 @@ class TemplateManager(object):
         alerts = "\n".join(TemplateManager.get_template("alert-template", {"alert_type" : "alert-danger", "alert_content" : e}) for e in escaped_errors)
 
         max_attachment_size = str(app.config['MAX_CONTENT_LENGTH']/1024/1024) + "MB"
-        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_method" : "POST", "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, 'csrf_token' : g.get('csrf_token', '')})
+        message_form = TemplateManager.get_template("message-form-template", {"username" : escaped_username, "form_target" : url_for('messages'), "max_attachment_size" : max_attachment_size, 'csrf_token' : g.get('csrf_token', '')})
 
         messages_content = ""
         for m in messages:
@@ -333,7 +333,7 @@ class TemplateManager(object):
     "login-template" :
     """
 <h4>You need to log in or <a href="register">create a new account</a></h4>
-<form action="${form_target}" method="${form_method}">
+<form action="${form_target}" method="POST">
     <div class="form-group">
         <label for="username">Username</label>
         <input type="text" class="form-control" id="username" name="username" placeholder="">
@@ -349,7 +349,7 @@ class TemplateManager(object):
     "register-template" :
     """
 <h1>Create account</h1>
-<form action="${form_target}" method="${form_method}">
+<form action="${form_target}" method="POST">
     <div class="form-group">
         <label for="username">Username</label>
         <input type="text" class="form-control" id="username" name="username" aria-describedby="usernameHelp" placeholder="">
@@ -438,7 +438,7 @@ class TemplateManager(object):
     <div class="card-body">
         <h4 class="card-title">Create new post</h4>
         <h6 class="card-subtitle mb-2 text-muted">Posting as ${username}</h6>
-        <form action="${form_target}" method="${form_method}" enctype="multipart/form-data">
+        <form action="${form_target}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf-token" value="${csrf_token}"/>
             <div class="form-group">
 			    <label for="post_content">Your post</label>
@@ -465,7 +465,7 @@ class TemplateManager(object):
     <div class="card-body">
         <h4 class="card-title">Send a message</h4>
         <h6 class="card-subtitle mb-2 text-muted">Send from ${username}</h6>
-        <form action="${form_target}" method="${form_method}" enctype="multipart/form-data">
+        <form action="${form_target}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf-token" value="${csrf_token}"/>
             <div class="form-group">
                 <label for="message_recipient">Recipient</label>
