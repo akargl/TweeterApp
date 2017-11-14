@@ -38,7 +38,8 @@ def init_db():
         files = os.listdir(dir_name)
 
         for item in files:
-            if any(item.lower().endswith(ext) for ext in app.config['ALLOWED_EXTENSIONS']):
+            if any(item.lower().endswith(ext)
+                   for ext in app.config['ALLOWED_EXTENSIONS']):
                 os.remove(os.path.join(dir_name, item))
     except OSError:
         pass
@@ -82,7 +83,8 @@ def create_entry(permitted_user_ids, private):
     from models import FileWrapper, MAX_CONTENT_LENGTH
 
     def shorten(data):
-        return (data[:MAX_CONTENT_LENGTH] + '..') if len(data) > MAX_CONTENT_LENGTH else data
+        return (data[:MAX_CONTENT_LENGTH] +
+                '..') if len(data) > MAX_CONTENT_LENGTH else data
 
     post_type = random.randint(0, 2)
     sample_images = ['panda.jpg', 'icon.pNg', 'panda.png', 'panda.jpeg']

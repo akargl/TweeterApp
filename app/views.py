@@ -52,19 +52,23 @@ def index():
             if len(errors):
                 return TemplateManager.get_index_template(posts, errors)
 
-        if post_content == "" and (attachment is None or (attachment is not None and attachment.filename == '')):
-            return TemplateManager.get_index_template(posts, ["Post can't be empty"])
+        if post_content == "" and (attachment is None or (
+                attachment is not None and attachment.filename == '')):
+            return TemplateManager.get_index_template(
+                posts, ["Post can't be empty"])
 
         filename = None
         if attachment:
             wrapper = FileWrapper.create(attachment, [g.user.id], False)
             if not wrapper:
-                return TemplateManager.get_index_template(posts, ['Could not upload file'])
+                return TemplateManager.get_index_template(
+                    posts, ['Could not upload file'])
             filename = wrapper.get_filename()
 
         post = Post.create(g.user.id, post_content, filename)
         if not post:
-            return TemplateManager.get_index_template(posts, ["Could not create post"])
+            return TemplateManager.get_index_template(
+                posts, ["Could not create post"])
 
         # Get new posts
         posts = Post.get_all()
@@ -94,16 +98,19 @@ def login():
         salt = User.get_salt(username)
         if not salt:
             # User not found
-            return TemplateManager.get_login_template(["Invalid Login or password."])
+            return TemplateManager.get_login_template(
+                ["Invalid Login or password."])
 
         _, hashed_password = User.create_hashed_password(salt, password)
         user = User.get_and_validate_user(username, hashed_password)
         if not user:
-            return TemplateManager.get_login_template(["Invalid Login or password."])
+            return TemplateManager.get_login_template(
+                ["Invalid Login or password."])
 
         result, session_token, csrf_token = Session.new_session(user)
         if not result:
-            return TemplateManager.get_login_template(["Could not create session"])
+            return TemplateManager.get_login_template(
+                ["Could not create session"])
 
         # Make the response and set the cookie
         url = url_for('index')
@@ -175,28 +182,33 @@ def messages():
 
         recipient = User.get_user_by_name(recipient_name)
         if not recipient:
-            return TemplateManager.get_messages_template(messages, ["Unknown recipient"])
+            return TemplateManager.get_messages_template(
+                messages, ["Unknown recipient"])
 
         attachment = request.files.get('attachment')
         if attachment:
             errors = FileWrapper.is_valid_file(attachment)
             if len(errors):
                 return TemplateManager.get_messages_template(messages, errors)
-        if message_content == "" and (attachment is None or (attachment is not None and attachment.filename == '')):
-            return TemplateManager.get_messages_template(messages, ["Message can't be empty"])
+        if message_content == "" and (attachment is None or (
+                attachment is not None and attachment.filename == '')):
+            return TemplateManager.get_messages_template(
+                messages, ["Message can't be empty"])
 
         filename = None
         if attachment:
             wrapper = FileWrapper.create(
                 attachment, [g.user.id, recipient.id], True)
             if not wrapper:
-                return TemplateManager.get_index_template(posts, ['Could not upload file'])
+                return TemplateManager.get_index_template(
+                    posts, ['Could not upload file'])
             filename = wrapper.get_filename()
 
         message = Message.create(
             g.user.id, recipient.id, message_content, filename)
         if not message:
-            return TemplateManager.get_messages_template(messages, ["Could not create message"])
+            return TemplateManager.get_messages_template(
+                messages, ["Could not create message"])
 
         messages = Message.get_messages_for_user_id(g.user.id)
         return TemplateManager.get_messages_template(messages), httplib.CREATED

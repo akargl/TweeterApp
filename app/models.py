@@ -47,7 +47,8 @@ class User:
         if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
             errors.append('Length of username invalid. Maximum length: {:d}'.format(
                 User.MAX_USERNAME_LEN))
-        if len(password) < User.MIN_PASSWORD_LEN or len(password) > User.MAX_PASSWORD_LEN:
+        if len(password) < User.MIN_PASSWORD_LEN or len(
+                password) > User.MAX_PASSWORD_LEN:
             errors.append('Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(
                 User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
         if not re.match("^[A-Za-z0-9_-]*$", username):
@@ -92,7 +93,8 @@ class User:
             'SELECT * from Users WHERE id = ?', [user_id], one=True)
         if user_data is None:
             return None
-        return User(user_data['id'], user_data['username'], bool(user_data['is_admin']))
+        return User(user_data['id'], user_data[
+                    'username'], bool(user_data['is_admin']))
 
     @staticmethod
     def get_user_by_name(username):
@@ -100,7 +102,8 @@ class User:
             'SELECT * from Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
         if user_data is None:
             return None
-        return User(user_data['id'], user_data['username'], user_data['is_admin'])
+        return User(user_data['id'], user_data[
+                    'username'], user_data['is_admin'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
@@ -108,9 +111,11 @@ class User:
             'SELECT * FROM Users WHERE LOWER(username) = LOWER(?)', [username], one=True)
         if user_data is None:
             return None
-        if not User.password_compare(user_data['password_token'], hashed_password):
+        if not User.password_compare(
+                user_data['password_token'], hashed_password):
             return None
-        return User(user_data['id'], user_data['username'], user_data['is_admin'])
+        return User(user_data['id'], user_data[
+                    'username'], user_data['is_admin'])
 
     @staticmethod
     def get_salt(username):
@@ -216,7 +221,8 @@ class Message:
     # str Content
     # str filename
 
-    def __init__(self, author_id, recipient_id, content, attachment_name, timestamp):
+    def __init__(self, author_id, recipient_id,
+                 content, attachment_name, timestamp):
         self.author_id = author_id
         self.recipient_id = recipient_id
         self.content = content
@@ -326,7 +332,8 @@ class FileWrapper:
         return str(self.file_id) + self.extension
 
     def get_storagepath(self):
-        return os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], self.get_filename())
+        return os.path.join(app.root_path, app.config[
+                            'UPLOAD_FOLDER'], self.get_filename())
 
     def serialize(self):
         return {

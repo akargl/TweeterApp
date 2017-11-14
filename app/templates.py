@@ -228,7 +228,8 @@ class TemplateManager(object):
 
     @staticmethod
     def generate_nav_link(text, target, active=False):
-        return TemplateManager.get_template("nav-link-template", {"nav_target": target, "nav_text": text, "nav_active": "active" if active else ""})
+        return TemplateManager.get_template(
+            "nav-link-template", {"nav_target": target, "nav_text": text, "nav_active": "active" if active else ""})
 
     @staticmethod
     def get_template(template_name, substitutions):
