@@ -33,7 +33,7 @@ class TemplateManager(object):
 
         main_content = alerts + register_template
 
-        main_template = TemplateManager.get_template("main-template", {"main_title" : "Register", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : ""})
+        main_template = TemplateManager.get_template("simple-main-template", {"main_title" : "Register", "main_content" : main_content})
 
         return main_template
 
@@ -47,7 +47,7 @@ class TemplateManager(object):
 
         main_content = alerts + login_template
 
-        main_template = TemplateManager.get_template("main-template", {"main_title" : "Login", "main_content" : main_content, "user_menu_display" : "none", "nav_items" : ""})
+        main_template = TemplateManager.get_template("simple-main-template", {"main_title" : "Login", "main_content" : main_content})
 
         return main_template
 
@@ -273,6 +273,60 @@ class TemplateManager(object):
     <!--<script src="/js/ie10-viewport-bug-workaround.js"></script>-->
 </body>
 
+</html>
+    """,
+    "simple-main-template" :
+    """
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Tweeter - ${main_title}</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="static/css/starter-template.css" rel="stylesheet">
+
+    <link href="static/css/tweeter.css" rel="stylesheet">
+
+    <script src="static/js/tweeter.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <a class="navbar-brand" href="">Tweeter</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar" aria-controls="navbar"
+            aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbar">
+            <ul class="navbar-nav mr-auto">
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        ${main_content}
+    </div>
+    <!-- /.container -->
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="static/js/jquery-3.2.1.slim.min.js"></script>
+    <script src="static/js/popper.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!--<script src="/js/ie10-viewport-bug-workaround.js"></script>-->
+</body>
 </html>
     """,
 
