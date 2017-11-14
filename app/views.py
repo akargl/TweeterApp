@@ -34,6 +34,7 @@ from templates import TemplateManager
 * TODO: second layer (double cookie, extra token,...)
 """
 
+
 @app.route("/", methods=['GET', 'POST'])
 @authentication_required()
 def index():
@@ -109,7 +110,8 @@ def login():
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
 
         expire_date = datetime.datetime.now()
-        expire_date = expire_date + datetime.timedelta(days=app.config['MAX_SESSION_AGE_DAYS'])
+        expire_date = expire_date + \
+            datetime.timedelta(days=app.config['MAX_SESSION_AGE_DAYS'])
         response.set_cookie(Session.SESSION_KEY, session_token, httponly=True,
                             expires=expire_date)
         return response
@@ -185,12 +187,14 @@ def messages():
 
         filename = None
         if attachment:
-            wrapper = FileWrapper.create(attachment, [g.user.id, recipient.id], True)
+            wrapper = FileWrapper.create(
+                attachment, [g.user.id, recipient.id], True)
             if not wrapper:
                 return TemplateManager.get_index_template(posts, ['Could not upload file'])
             filename = wrapper.get_filename()
 
-        message = Message.create(g.user.id, recipient.id, message_content, filename)
+        message = Message.create(
+            g.user.id, recipient.id, message_content, filename)
         if not message:
             return TemplateManager.get_messages_template(messages, ["Could not create message"])
 
@@ -245,7 +249,8 @@ def api_get_file(filename):
 
     # Don't serve symlinks
     if os.path.islink(storage_path):
-        app.logger.debug("Requested file {:s} is a symlink".format(storage_path))
+        app.logger.debug(
+            "Requested file {:s} is a symlink".format(storage_path))
         abort(httplib.FORBIDDEN)
 
     return send_file(storage_path)

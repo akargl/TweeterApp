@@ -38,7 +38,8 @@ def authentication_required(admin=False, redirect_to_login=True):
         def func_wrapper(*args, **kwargs):
             user, csrf_token = user_from_session()
             if user:
-                app.logger.debug("Login via session cookie for {:s}".format(user.username))
+                app.logger.debug(
+                    "Login via session cookie for {:s}".format(user.username))
                 g.csrf_token = csrf_token
                 response = csrf_protection()
                 if response:

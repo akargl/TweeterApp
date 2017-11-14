@@ -99,7 +99,8 @@ def create_entry(permitted_user_ids, private):
 
     filename = None
     if image:
-        image_path = os.path.join(app.root_path, '..','tests', 'test_data', image)
+        image_path = os.path.join(
+            app.root_path, '..', 'tests', 'test_data', image)
         with open(image_path, 'rb') as fp:
             file = FileStorage(fp)
             wrapper = FileWrapper.create(file, permitted_user_ids, private)
