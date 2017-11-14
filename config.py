@@ -1,4 +1,4 @@
-DEBUG = True
+DEBUG = False
 DATABASE = 'database.db'
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = set(['.png', '.jpg', '.jpeg'])
