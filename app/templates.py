@@ -169,9 +169,8 @@ class TemplateManager(object):
                 "username": escaped_username,
                 "form_target": url_for('messages'),
                 "max_attachment_size": max_attachment_size,
-                'csrf_token': g.get(
-                    'csrf_token',
-                    '')})
+                'csrf_token': g.get('csrf_token','')
+            })
 
         messages_content = ""
         for m in messages:
@@ -231,7 +230,9 @@ class TemplateManager(object):
                 "main_content": main_content,
                 "user_menu_display": "",
                 "nav_items": nav_links,
-                "username": escaped_username})
+                "username": escaped_username,
+                'csrf_token': g.get('csrf_token','')
+            })
 
         return main_template
 
@@ -298,7 +299,9 @@ class TemplateManager(object):
                 "main_content": main_content,
                 "user_menu_display": "",
                 "nav_items": nav_links,
-                "username": escaped_username})
+                "username": escaped_username,
+                'csrf_token': g.get('csrf_token','')
+            })
 
         return main_template
 
