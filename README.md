@@ -89,7 +89,7 @@ flask seeddb
 To start the application, run the following command in the root folder of the application.
 
 ```bash
-flask run
+python run.py
 ```
 
 Now the app will run on port 5000. Open a webbrowser and visit `https://localhost:5000`.
