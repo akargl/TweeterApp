@@ -10,6 +10,7 @@ from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 from db import query_db, insert_db
 from app import app
 from os import path
+from difflib import SequenceMatcher
 
 
 MAX_CONTENT_LENGTH = 4 * 140
@@ -41,6 +42,14 @@ class User:
         }
 
     @staticmethod
+    def similar(a, b):
+        return SequenceMatcher(None, a, b).ratio()
+
+    @staticmethod
+    def contains_non_ascii(s):
+        return any(ord(c) >= 128 for c in s)
+
+    @staticmethod
     def verify_credential_policy(username, password):
         """ Checks against the password policy """
         errors = []
@@ -53,6 +62,10 @@ class User:
             errors.append(
                 'Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(
                     User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
+        if User.similar(username, password) > 0.8:
+            errors.append('Password cannot be the same or similar as the username')
+        if User.contains_non_ascii(password):
+            errors.append('Password cannot contain non-ASCII characters')
         if not re.match("^[A-Za-z0-9_-]*$", username):
             errors.append(
                 'Username must only contain letters, numbers, and underscores')

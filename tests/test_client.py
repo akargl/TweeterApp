@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 import os
 import json
 import tempfile
@@ -145,6 +147,30 @@ def test_successful_register(client):
     ), follow_redirects=True)
     assert b'Login' in response.data
     assert models.User.get_user_by_name('myuser')
+
+
+def test_password_same_as_the_username_register(client):
+    response = client.post('/register', data=dict(
+        username='mynewuser',
+        password='mynewuser'
+    ), follow_redirects=True)
+    assert b'Password cannot be the same or similar as the username' in response.data
+
+
+def test_password_similar_as_the_username_register(client):
+    response = client.post('/register', data=dict(
+        username='mynewuser',
+        password='mynewuser1'
+    ), follow_redirects=True)
+    assert b'Password cannot be the same or similar as the username' in response.data
+
+
+def test_password_reject_non_ascii_register(client):
+    response = client.post('/register', data=dict(
+        username='mynewuser',
+        password=u'My-Emoji-Password 👍'
+    ), follow_redirects=True)
+    assert b'Password cannot contain non-ASCII characters' in response.data
 
 
 def test_register_no_form_data(client):

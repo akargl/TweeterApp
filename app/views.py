@@ -35,8 +35,11 @@ from templates import TemplateManager
 """
 
 @app.after_request
-def apply_caching(response):
+def apply_headers(response):
+    # Enable XSS protection for Google Chrome and Internet Explorer
     response.headers["X-XSS-Protection"] = '1; mode=block'
+    # Disallow embedding of the site into other pages via <fram>,...
+    response.headers["X-Frame-Options"] = 'SAMEORIGIN'
     return response
 
 
