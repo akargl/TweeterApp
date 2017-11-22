@@ -34,6 +34,11 @@ from templates import TemplateManager
 * TODO: second layer (double cookie, extra token,...)
 """
 
+@app.after_request
+def apply_caching(response):
+    response.headers["X-XSS-Protection"] = '1; mode=block'
+    return response
+
 
 @app.route("/", methods=['GET', 'POST'])
 @authentication_required()
