@@ -36,7 +36,7 @@ When building the image, the database is initialized and seeded with the sample 
 
 ## Native Deployment without Docker
 
-Assuming that `python 2.7` and `pip` are already installed. Optionally use `virtualenv` to create a new environment as well.
+Assuming that `python 2.7,` `pip`, and `openssl` are already installed. Optionally use `virtualenv` to create a new environment as well.
 
 The following sequence of commands installs the needed requirements and sets the flask application
 
@@ -45,7 +45,17 @@ pip install -r requirements.txt
 export FLASK_APP=run.py
 ```
 
-Before the first start of the application, the database needs to be initialized and optionally seeded.
+Before the first start of the application, a SSL certificate needs to be created and the database needs to be initialized and optionally seeded.
+
+### Create a self signed SSL certificate
+
+Create a self-signed certificate on the command line.
+
+```bash
+openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365 -batch
+```
+
+For production, please use a real certificate, not a self-signed one.
 
 ### Initialize Database
 
@@ -82,4 +92,4 @@ To start the application, run the following command in the root folder of the ap
 flask run
 ```
 
-Now the app will run on port 5000. Open a webbrowser and visit `localhost:5000`.
+Now the app will run on port 5000. Open a webbrowser and visit `https://localhost:5000`.

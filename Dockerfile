@@ -7,6 +7,8 @@ RUN groupadd tweetergroup && useradd -m -g tweetergroup -s /bin/bash tweeter
 RUN mkdir -p /home/tweeter
 WORKDIR /home/tweeter
 
+RUN openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365 -batch
+
 COPY requirements.txt /home/tweeter
 RUN pip install --no-cache-dir -r requirements.txt
 

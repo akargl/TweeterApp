@@ -1,6 +1,10 @@
 # No database
 database.db
 
+# No Certificates
+cert.pem
+key.pem
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
