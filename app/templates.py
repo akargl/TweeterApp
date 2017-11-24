@@ -334,14 +334,9 @@ class TemplateManager(object):
 
     <title>Tweeter - ${main_title}</title>
 
-    <!-- Bootstrap core CSS -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Custom styles for this template -->
     <link href="static/css/starter-template.css" rel="stylesheet">
-
     <link href="static/css/tweeter.css" rel="stylesheet">
-
     <script src="static/js/tweeter.js"></script>
 </head>
 
@@ -380,17 +375,10 @@ class TemplateManager(object):
     <div class="container">
         ${main_content}
     </div>
-    <!-- /.container -->
 
-
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
     <script src="static/js/jquery-3.2.1.slim.min.js"></script>
     <script src="static/js/popper.min.js"></script>
     <script src="static/js/bootstrap.min.js"></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <!--<script src="/js/ie10-viewport-bug-workaround.js"></script>-->
 </body>
 
 </html>
@@ -408,14 +396,9 @@ class TemplateManager(object):
 
     <title>Tweeter - ${main_title}</title>
 
-    <!-- Bootstrap core CSS -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Custom styles for this template -->
     <link href="static/css/starter-template.css" rel="stylesheet">
-
     <link href="static/css/tweeter.css" rel="stylesheet">
-
     <script src="static/js/tweeter.js"></script>
 </head>
 
@@ -436,16 +419,10 @@ class TemplateManager(object):
     <div class="container">
         ${main_content}
     </div>
-    <!-- /.container -->
 
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
     <script src="static/js/jquery-3.2.1.slim.min.js"></script>
     <script src="static/js/popper.min.js"></script>
     <script src="static/js/bootstrap.min.js"></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <!--<script src="/js/ie10-viewport-bug-workaround.js"></script>-->
 </body>
 </html>
     """,

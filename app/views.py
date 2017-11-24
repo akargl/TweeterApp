@@ -38,8 +38,15 @@ from templates import TemplateManager
 def apply_headers(response):
     # Enable XSS protection for Google Chrome and Internet Explorer
     response.headers["X-XSS-Protection"] = '1; mode=block'
-    # Disallow embedding of the site into other pages via <fram>,...
+    # Disallow embedding of the site into other pages via <frame>,...
     response.headers["X-Frame-Options"] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # No downgrade attacks. Everything HTTPS
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+    csp_policy = "default-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
+    response.headers['Content-Security-Policy'] = csp_policy
+    # For Firefox and older IEs
+    response.headers['X-Content-Security-Policy'] = csp_policy
     return response
 
 
