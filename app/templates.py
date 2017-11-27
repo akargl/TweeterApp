@@ -126,7 +126,8 @@ class TemplateManager(object):
                             "post_text": escaped_content,
                             "post_file_src": post_file_src,
                             "post_time": datetime.datetime.fromtimestamp(
-                                p.timestamp)})
+                                p.timestamp)
+                        })
             posts_content += post_content + "\n"
 
         main_content = alerts + post_form + posts_content
@@ -139,9 +140,9 @@ class TemplateManager(object):
                 "user_menu_display": "",
                 "nav_items": nav_links,
                 "username": escaped_username,
-                'csrf_token': g.get(
-                    'csrf_token',
-                    '')})
+                'csrf_token': g.get('csrf_token', ''),
+                "additional_headers" : ""
+            })
 
         return main_template
 
@@ -231,7 +232,8 @@ class TemplateManager(object):
                 "user_menu_display": "",
                 "nav_items": nav_links,
                 "username": escaped_username,
-                'csrf_token': g.get('csrf_token','')
+                'csrf_token': g.get('csrf_token',''),
+                "additional_headers": ""
             })
 
         return main_template
@@ -300,7 +302,10 @@ class TemplateManager(object):
                 "user_menu_display": "",
                 "nav_items": nav_links,
                 "username": escaped_username,
-                'csrf_token': g.get('csrf_token','')
+                'csrf_token': g.get('csrf_token',''),
+                "additional_headers" : TemplateManager.get_template("administration-header-template", {
+                    'csrf_token': g.get('csrf_token','')
+                })
             })
 
         return main_template
@@ -337,7 +342,7 @@ class TemplateManager(object):
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <link href="static/css/starter-template.css" rel="stylesheet">
     <link href="static/css/tweeter.css" rel="stylesheet">
-    <script src="static/js/tweeter.js"></script>
+    ${additional_headers}
 </head>
 
 <body>
@@ -399,7 +404,6 @@ class TemplateManager(object):
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <link href="static/css/starter-template.css" rel="stylesheet">
     <link href="static/css/tweeter.css" rel="stylesheet">
-    <script src="static/js/tweeter.js"></script>
 </head>
 
 <body>
@@ -587,9 +591,14 @@ class TemplateManager(object):
 </div>
     """,
 
+    "administration-header-template":
+    """
+    <script src="static/js/tweeter.js"></script>
+    <meta name="csrf-token" content="${csrf_token}"/>
+    """,
+
                  "administration-main-template":
                  """
-<script type="text/javascript">window.csrf_token = "${csrf_token}";</script>
 <h1>Administration</h1>
 <ul class="list-group">
     ${user_list_group}
@@ -604,10 +613,10 @@ class TemplateManager(object):
             ${user_name} ${group_badges}
         </div>
         <div class="col">
-            <button type="button" class="btn btn-primary btn-sm" onclick="administrationPromotionClickHandler(${user_id}, true);" style="display: ${promote_button_display};">
+            <button data-userid="${user_id}" type="button" class="btn btn-primary btn-sm btn-promote" style="display: ${promote_button_display};">
                 Promote to admin
             </button>
-            <button type="button" class="btn btn-danger btn-sm" onclick="administrationDeletionClickHandler(${user_id});" style="display: ${delete_button_display};">
+            <button data-userid="${user_id}" type="button" class="btn btn-danger btn-sm btn-delete" style="display: ${delete_button_display};">
                 Delete user
             </button>
         </div>

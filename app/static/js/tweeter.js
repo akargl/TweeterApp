@@ -1,4 +1,31 @@
 /**
+ * attach click handlers to admin interface buttons
+ */
+window.addEventListener("load", () => {
+    document.querySelectorAll(".btn-promote").forEach((el) => {
+        el.addEventListener("click", () => {
+            let userId = el.getAttribute("data-userid");
+            administrationPromotionClickHandler(userId, true);
+        });
+    });
+
+    document.querySelectorAll(".btn-delete").forEach((el) => {
+        el.addEventListener("click", () => {
+            let userId = el.getAttribute("data-userid");
+            administrationDeletionClickHandler(userId);
+        });
+    });
+});
+
+/**
+ * get CSRF token from html header
+ * @returns {string}
+ */
+function getCSRFToken() {
+    return document.querySelector("meta[name='csrf-token']").getAttribute("content");
+}
+
+/**
  * 
  * @param {number} userId 
  * @param {boolean} toAdmin 
@@ -8,7 +35,7 @@ function requestUserPromotion(userId, toAdmin) {
 
     let body = objectToFormData({
         "is_admin" : toAdmin ? "1" : "0",
-        "csrf-token" : window.csrf_token,
+        "csrf-token" : getCSRFToken(),
     });
 
     return fetch(url, {
@@ -30,7 +57,7 @@ function requestUserDeletion(userId) {
     let url = `/users/${userId}`;
 
     let body = objectToFormData({
-        "csrf-token" : window.csrf_token,
+        "csrf-token" : getCSRFToken(),
     });
 
     return fetch(url, {
