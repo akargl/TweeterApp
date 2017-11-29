@@ -82,15 +82,7 @@ def login():
             # Already logged in
             return redirect(url_for('index'), code=httplib.SEE_OTHER)
 
-        salt = User.get_salt(username)
-        if not salt:
-            # User not found
-            return TemplateManager.get_login_template(
-                ["Invalid Login or password."])
-
-        _, hashed_password = User.create_hashed_password(salt, password)
-        user = User.get_and_validate_user(username, hashed_password)
-        if not user:
+        if not User.check_password(username, password):
             return TemplateManager.get_login_template(
                 ["Invalid Login or password."])
 
@@ -146,12 +138,21 @@ def register():
         return redirect(url_for('login'), code=httplib.SEE_OTHER)
 
 
-@app.route("/deregister", methods=['POST'])
+@app.route("/deregister", methods=['GET', 'POST'])
 @authentication_required()
 def deregister():
-    g.user.delete()
-    g.user = None
-    return redirect(url_for('login'))
+    if request.method == 'GET':
+        return TemplateManager.get_deregister_template()
+    elif request.method == 'POST':
+        password = request.form.get('user_password', '')
+        app.logger.debug("Request " + request.method)
+
+        if not User.check_password(g.user.username, password):
+            return TemplateManager.get_deregister_template(['Invalid password'])
+
+        g.user.delete()
+        g.user = None
+        return redirect(url_for('login'))
 
 
 @app.route("/messages", methods=['GET', 'POST'])
@@ -212,18 +213,9 @@ def administration():
 @authentication_required(admin=True)
 def user(id):
     password = request.form.get('password', "")
-
-    salt = User.get_salt(g.user.username)
-    if not salt:
+    if not User.check_password(g.user.username, password):
         abort(httplib.UNAUTHORIZED)
 
-    _, hashed_password = User.create_hashed_password(salt, password)
-    user = User.get_and_validate_user(g.user.username, hashed_password)
-
-    if not user:
-        abort(httplib.UNAUTHORIZED)
-
-    app.logger.debug("Request " + request.method)
     user = User.get_user_by_id(id)
     if not user:
         abort(httplib.NOT_FOUND)

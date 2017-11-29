@@ -76,7 +76,7 @@ function requestLogout() {
  * @returns {Promise}
  */
 function requestDeregistration() {
-    return doRequest("/deregister", "POST");
+    return doRequest("/deregister", "GET");
 }
 
 /**

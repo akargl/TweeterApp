@@ -101,6 +101,19 @@ class User:
         return compare_digest(a.decode('utf-8'), b.decode('utf-8'))
 
     @staticmethod
+    def check_password(username, password):
+        salt = User.get_salt(username)
+        if not salt:
+            return False
+
+        _, hashed_password = User.create_hashed_password(salt, password)
+        user = User.get_and_validate_user(username, hashed_password)
+
+        if not user:
+            return False
+        return True
+
+    @staticmethod
     def get_user_by_id(user_id):
         app.logger.debug(
             "User::get_user_by_id called with {:d}".format(user_id))

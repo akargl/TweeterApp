@@ -44,10 +44,40 @@ class TemplateManager(object):
         return main_template
 
     @staticmethod
+    def get_deregister_template(errors=[]):
+        escaped_errors = [
+            TemplateManager.escape_for_html_element_context(e) for e in errors]
+        escaped_username = TemplateManager.escape_for_html_element_context(
+            g.user.username)
+
+        deregister_template = TemplateManager.get_template(
+            "deregister-template",
+            {"form_target": url_for('deregister'), 'csrf_token': g.get('csrf_token', '')})
+
+        alerts = "\n".join(TemplateManager.get_template(
+            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
+        nav_links = "\n".join([TemplateManager.generate_nav_link(
+            "Home", "/", active=True), TemplateManager.generate_nav_link("Messages", "messages")])
+
+        main_content = alerts + deregister_template
+        main_template = TemplateManager.get_template(
+            "main-template",
+            {
+                "main_title": "Deregister",
+                "main_content": main_content,
+                "nav_items": nav_links,
+                "username": escaped_username,
+                'csrf_token': g.get('csrf_token', '')
+            })
+
+        return main_template
+
+
+    @staticmethod
     def get_login_template(errors=[]):
         escaped_errors = [
             TemplateManager.escape_for_html_element_context(e) for e in errors]
-
+ 
         login_template = TemplateManager.get_template(
             "login-template", {"form_target": url_for('login')})
 
@@ -457,7 +487,18 @@ class TemplateManager(object):
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
     """,
-
+                "deregister-template":
+                """
+                <h4>Please enter your password to delete your account:</h4>
+                <form action="${form_target}" method="POST">
+                    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
+                    <div class="form-group">
+                        <label for="user_password">Password:</label>
+                        <input type="password" name="user_password" id="user_password"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Delete my account</button>
+                </form>
+                """,
                  "post-plain-template":
                  """
 <div class="card">
