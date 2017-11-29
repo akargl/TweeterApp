@@ -496,7 +496,7 @@ class TemplateManager(object):
                         <label for="user_password">Password:</label>
                         <input type="password" name="user_password" id="user_password"/>
                     </div>
-                    <button type="submit" class="btn btn-primary">Delete my account</button>
+                    <button type="submit" class="btn btn-danger">Delete my account</button>
                 </form>
                 """,
                  "post-plain-template":
