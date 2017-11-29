@@ -59,6 +59,10 @@ class TemplateManager(object):
         nav_links = "\n".join([TemplateManager.generate_nav_link(
             "Home", "/", active=True), TemplateManager.generate_nav_link("Messages", "messages")])
 
+        if g.user.is_admin:
+            nav_links += TemplateManager.generate_nav_link(
+                "Administration", "administration")
+
         main_content = alerts + deregister_template
         main_template = TemplateManager.get_template(
             "main-template",
