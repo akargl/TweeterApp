@@ -93,3 +93,15 @@ python run.py
 ```
 
 Now the app will run on port 5000. Open a webbrowser and visit `https://localhost:5000`.
+
+# Security Considerations
+
+## Session Management
+
+* Session cookie is 32 characters long (random) and gets signed with the application key for server-side date expiration
+* Session cookie is set to `secure` and `HTTPOnly`
+* Session cookie has a server-side timeout of 7 days
+* Session cookie has a client-side expiry date of 7 days
+* No content data in the session cookie
+  * No encryption needed
+  * Cookie is signed. So the attacker cannot change the expiry date
