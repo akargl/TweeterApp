@@ -391,7 +391,7 @@ class TemplateManager(object):
                         <a class="dropdown-item" href="#" id="logout_link">
                             Logout
                         </a>
-                        <a class="dropdown-item" href="#" id="deregister_link">
+                        <a class="dropdown-item" href="/deregister">
                             Delete my account
                         </a>
                     </div>

@@ -82,7 +82,8 @@ def login():
             # Already logged in
             return redirect(url_for('index'), code=httplib.SEE_OTHER)
 
-        if not User.check_password(username, password):
+        user = User.check_password(username, password)
+        if not user:
             return TemplateManager.get_login_template(
                 ["Invalid Login or password."])
 
@@ -144,7 +145,7 @@ def deregister():
     if request.method == 'GET':
         return TemplateManager.get_deregister_template()
     elif request.method == 'POST':
-        password = request.form.get('user_password', '')
+        password = request.form['user_password']
         app.logger.debug("Request " + request.method)
 
         if not User.check_password(g.user.username, password):

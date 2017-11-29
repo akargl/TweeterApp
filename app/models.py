@@ -104,14 +104,14 @@ class User:
     def check_password(username, password):
         salt = User.get_salt(username)
         if not salt:
-            return False
+            return None
 
         _, hashed_password = User.create_hashed_password(salt, password)
         user = User.get_and_validate_user(username, hashed_password)
 
         if not user:
-            return False
-        return True
+            return None
+        return user
 
     @staticmethod
     def get_user_by_id(user_id):
