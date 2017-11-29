@@ -15,6 +15,16 @@ window.addEventListener("load", () => {
             administrationDeletionClickHandler(userId);
         });
     });
+
+    let logoutLink = document.getElementById("logout_link");
+    if (logoutLink) {
+        logoutLink.addEventListener("click", logoutClickHandler);
+    }
+    
+    let deregisterLink = document.getElementById("deregister_link");
+    if (deregisterLink) {
+        deregisterLink.addEventListener("click", deregisterClickHandler);
+    }
 });
 
 /**
@@ -29,48 +39,40 @@ function getCSRFToken() {
  * 
  * @param {number} userId 
  * @param {boolean} toAdmin 
+ * @returns {Promise}
  */
 function requestUserPromotion(userId, toAdmin) {
-    let url = `/users/${userId}`;
-
-    let body = objectToFormData({
-        "is_admin" : toAdmin ? "1" : "0",
-        "csrf-token" : getCSRFToken(),
-    });
-
-    return fetch(url, {
-        credentials : "same-origin",
-        method : "PUT",
-        headers : {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body : body
-    })
-        .then(status);
+    return doRequest(`/users/${userId}`, "PUT", {"is_admin" : toAdmin ? "1" : "0"});
 }
 
 /**
  * 
  * @param {number} userId 
+ * @returns {Promise}
  */
 function requestUserDeletion(userId) {
-    let url = `/users/${userId}`;
-
-    let body = objectToFormData({
-        "csrf-token" : getCSRFToken(),
-    });
-
-    return fetch(url, {
-        credentials : "same-origin",
-        method : "DELETE",
-        headers : {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body : body
-    })
-        .then(status);
+    return doRequest(`/users/${userId}`, "DELETE");
 }
 
+/**
+ * @returns {Promise}
+ */
+function requestLogout() {
+    return doRequest("/logout", "POST");
+}
+
+/**
+ * @returns {Promise}
+ */
+function requestDeregistration() {
+    return doRequest("/deregister", "POST");
+}
+
+/**
+ * 
+ * @param {number} userId 
+ * @param {boolean} toAdmin 
+ */
 function administrationPromotionClickHandler(userId, toAdmin) {
     return requestUserPromotion(userId, toAdmin)
         .then(() => {
@@ -78,11 +80,56 @@ function administrationPromotionClickHandler(userId, toAdmin) {
         });
 }
 
+/**
+ * 
+ * @param {number} userId 
+ */
 function administrationDeletionClickHandler(userId) {
     return requestUserDeletion(userId)
         .then(() => {
             document.location.reload();
         });
+}
+
+/**
+ * 
+ */
+function logoutClickHandler() {
+    return requestLogout()
+        .then(() => {
+            document.location.reload();
+        });
+}
+
+/**
+ * 
+ */
+function deregisterClickHandler() {
+    return requestDeregistration()
+        .then(() => {
+            document.location.reload();
+        });
+}
+
+/**
+ * 
+ * @param {string} url 
+ * @param {string} method 
+ * @param {Object} body 
+ * @returns {Promise}
+ */
+function doRequest(url, method = "GET", body = {}) {
+    body["csrf-token"] = getCSRFToken();
+
+    return fetch(url, {
+        credentials : "same-origin",
+        method : method,
+        headers : {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body : objectToFormData(body)
+    })
+        .then(status);
 }
 
 function status(response) {  

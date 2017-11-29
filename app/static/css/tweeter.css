@@ -1,3 +1,12 @@
 .card {
     margin-bottom: 1em;
 }
+
+.hidden {
+    display: none;
+}
+
+.post-image {
+    max-height: 300px;
+    object-fit: contain;
+}

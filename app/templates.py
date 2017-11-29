@@ -137,11 +137,9 @@ class TemplateManager(object):
             {
                 "main_title": "Posts",
                 "main_content": main_content,
-                "user_menu_display": "",
                 "nav_items": nav_links,
                 "username": escaped_username,
-                'csrf_token': g.get('csrf_token', ''),
-                "additional_headers" : ""
+                'csrf_token': g.get('csrf_token', '')
             })
 
         return main_template
@@ -229,11 +227,9 @@ class TemplateManager(object):
             {
                 "main_title": "Messages",
                 "main_content": main_content,
-                "user_menu_display": "",
                 "nav_items": nav_links,
                 "username": escaped_username,
-                'csrf_token': g.get('csrf_token',''),
-                "additional_headers": ""
+                'csrf_token': g.get('csrf_token','')
             })
 
         return main_template
@@ -274,8 +270,8 @@ class TemplateManager(object):
                             {
                                 "group_name": "Admin"}),
                         "user_id": u.id,
-                        "promote_button_display": "none",
-                        "delete_button_display": "none"})
+                        "promote_button_class": "hidden",
+                        "delete_button_class": "hidden"})
             else:
                 user_list_group += TemplateManager.get_template(
                     "administration-user-template",
@@ -284,8 +280,8 @@ class TemplateManager(object):
                             u.username),
                         "group_badges": "",
                         "user_id": u.id,
-                        "promote_button_display": "",
-                        "delete_button_display": ""})
+                        "promote_button_class": "",
+                        "delete_button_class": ""})
 
         admin_main = TemplateManager.get_template(
             "administration-main-template", {
@@ -299,13 +295,9 @@ class TemplateManager(object):
             {
                 "main_title": "Administration",
                 "main_content": main_content,
-                "user_menu_display": "",
                 "nav_items": nav_links,
                 "username": escaped_username,
-                'csrf_token': g.get('csrf_token',''),
-                "additional_headers" : TemplateManager.get_template("administration-header-template", {
-                    'csrf_token': g.get('csrf_token','')
-                })
+                'csrf_token': g.get('csrf_token','')
             })
 
         return main_template
@@ -342,7 +334,8 @@ class TemplateManager(object):
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <link href="static/css/starter-template.css" rel="stylesheet">
     <link href="static/css/tweeter.css" rel="stylesheet">
-    ${additional_headers}
+    <script src="static/js/tweeter.js"></script>
+    <meta name="csrf-token" content="${csrf_token}"/>
 </head>
 
 <body>
@@ -358,18 +351,18 @@ class TemplateManager(object):
             <ul class="navbar-nav mr-auto">
                 ${nav_items}
             </ul>
-            <ul class="navbar-nav ml-auto" style="display: ${user_menu_display};">
+            <ul class="navbar-nav ml-auto">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false">
                         Logged in as ${username}
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                        <a class="dropdown-item" href="#" onclick="document.getElementById('logoutForm').submit();">
-                            <form id="logoutForm" action="logout" method="POST"><input type="hidden" name="csrf-token" value="${csrf_token}"/></form>Logout
+                        <a class="dropdown-item" href="#" id="logout_link">
+                            Logout
                         </a>
-                        <a class="dropdown-item" href="#" onclick="document.getElementById('deregisterForm').submit();">
-                            <form id="deregisterForm" action="deregister" method="POST"><input type="hidden" name="csrf-token" value="${csrf_token}"/></form>Delete my account
+                        <a class="dropdown-item" href="#" id="deregister_link">
+                            Delete my account
                         </a>
                     </div>
                 </li>
@@ -478,8 +471,8 @@ class TemplateManager(object):
                  "post-image-template":
                  """
 <div class="card">
-    <a href="${post_image_src}" style="display: "";">
-        <img class="card-img-top" src="${post_image_src}" style="max-height: 300px; object-fit: contain;">
+    <a href="${post_image_src}">
+        <img class="card-img-top post-image" src="${post_image_src}">
     </a>
     <div class="card-body">
         <h6 class="card-subtitle mb-2 text-muted">Posted by ${post_author} at ${post_time}</h6>
@@ -512,8 +505,8 @@ class TemplateManager(object):
                  "message-image-template":
                  """
 <div class="card">
-    <a href="${message_image_src}" style="display: "";">
-        <img class="card-img-top" src="${message_image_src}" style="max-height: 300px; object-fit: contain;">
+    <a href="${message_image_src}">
+        <img class="card-img-top post-image" src="${message_image_src}">
     </a>
     <div class="card-body">
         <h6 class="card-subtitle mb-2 text-muted">Sent by ${message_author} to ${message_recipient} at ${message_time}</h6>
@@ -591,12 +584,6 @@ class TemplateManager(object):
 </div>
     """,
 
-    "administration-header-template":
-    """
-    <script src="static/js/tweeter.js"></script>
-    <meta name="csrf-token" content="${csrf_token}"/>
-    """,
-
                  "administration-main-template":
                  """
 <h1>Administration</h1>
@@ -613,10 +600,10 @@ class TemplateManager(object):
             ${user_name} ${group_badges}
         </div>
         <div class="col">
-            <button data-userid="${user_id}" type="button" class="btn btn-primary btn-sm btn-promote" style="display: ${promote_button_display};">
+            <button data-userid="${user_id}" type="button" class="btn btn-primary btn-sm btn-promote ${promote_button_class}">
                 Promote to admin
             </button>
-            <button data-userid="${user_id}" type="button" class="btn btn-danger btn-sm btn-delete" style="display: ${delete_button_display};">
+            <button data-userid="${user_id}" type="button" class="btn btn-danger btn-sm btn-delete ${delete_button_class}">
                 Delete user
             </button>
         </div>
