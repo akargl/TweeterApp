@@ -17,7 +17,13 @@ def apply_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # No downgrade attacks. Everything HTTPS
     response.headers['Strict-Transport-Security'] = 'max-age=31536000'
-    csp_policy = "default-src 'none'; font-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'self';"
+    csp_policy = "default-src 'none'; " \
+                 "font-src 'self'; " \
+                 "style-src 'self'; " \
+                 "script-src 'self'; " \
+                 "img-src 'self'; " \
+                 "connect-src 'self'; " \
+                 "report-uri https://sentry.io/api/252244/csp-report/?sentry_key=f79b05a88e324c20ba590c4034680917"
     response.headers['Content-Security-Policy'] = csp_policy
     return response
 
