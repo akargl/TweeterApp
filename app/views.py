@@ -133,7 +133,7 @@ def login():
         expire_date = expire_date + \
             datetime.timedelta(days=app.config['MAX_SESSION_AGE_DAYS'])
         response.set_cookie(Session.SESSION_KEY, session_token, httponly=True,
-                            expires=expire_date)
+                            expires=expire_date, secure=True)
         return response
 
 
