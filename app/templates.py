@@ -30,8 +30,20 @@ class TemplateManager(object):
         escaped_errors = [
             TemplateManager.escape_for_html_element_context(e) for e in errors]
 
+        if app.config.get('RECAPTCHA_ENABLED', False):
+            attrs = {
+                'sitekey': app.config.get('RECAPTCHA_PUBLIC_KEY', '')
+            }
+            snippet = u' '.join([u'data-%s="%s"' % (k, attrs[k]) for k in attrs])
+
+            recaptcha_template = TemplateManager.get_template(
+                "recaptcha-template", {"snippet" : snippet, "nonce": g.get('csp_nonce', '')}
+            )
+        else:
+            recaptcha_template = ""
+
         register_template = TemplateManager.get_template(
-            "register-template", {"form_target": url_for('register')})
+            "register-template", {"form_target": url_for('register'), "recaptcha": recaptcha_template})
 
         alerts = "\n".join(TemplateManager.get_template(
             "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
@@ -81,9 +93,21 @@ class TemplateManager(object):
     def get_login_template(errors=[]):
         escaped_errors = [
             TemplateManager.escape_for_html_element_context(e) for e in errors]
- 
+
+        if app.config.get('RECAPTCHA_ENABLED', False):
+            attrs = {
+                'sitekey': app.config.get('RECAPTCHA_PUBLIC_KEY', '')
+            }
+            snippet = u' '.join([u'data-%s="%s"' % (k, attrs[k]) for k in attrs])
+
+            recaptcha_template = TemplateManager.get_template(
+                "recaptcha-template", {"snippet" : snippet, "nonce": g.get('csp_nonce', '')}
+            )
+        else:
+            recaptcha_template = ""
+
         login_template = TemplateManager.get_template(
-            "login-template", {"form_target": url_for('login')})
+            "login-template", {"form_target": url_for('login'), "recaptcha": recaptcha_template})
 
         alerts = "\n".join(TemplateManager.get_template(
             "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
@@ -470,6 +494,7 @@ class TemplateManager(object):
         <label for="password">Password</label>
         <input type="password" class="form-control" id="password" name="password" placeholder="">
     </div>
+    ${recaptcha}
     <button type="submit" class="btn btn-primary">Login</button>
 </form>
     """,
@@ -488,6 +513,7 @@ class TemplateManager(object):
         <input type="password" class="form-control" id="password" name="password" aria-describedby="passwordHelp" placeholder="">
         <small id="passwordHelp" class="form-text text-muted">Must be at least 8 and maximum 256 characters</small>
     </div>
+    ${recaptcha}
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
     """,
@@ -678,5 +704,10 @@ class TemplateManager(object):
 <li class="nav-item ${nav_active}">
     <a class="nav-link" href="${nav_target}">${nav_text}</a>
 </li>
-    """
+    """,
+                 "recaptcha-template":
+                 """
+<script nonce="${nonce}" src="https://www.google.com/recaptcha/api.js" async defer></script>
+<div class="g-recaptcha" ${snippet}></div>
+                 """
                  }

@@ -86,3 +86,20 @@ def csrf_protection():
     match = safe_str_cmp(form_csrf_token, session_csrf_token)
     if not match:
         return abort(httplib.BAD_REQUEST)
+
+
+def validate_recaptcha(response, remote_ip):
+    data = url_encode({
+        'secret': app.config.get('RECAPTCHA_SECRET_KEY', ''),
+        'remoteip': remote_ip,
+        'response': response
+    })
+    http_response = http.urlopen('https://www.google.com/recaptcha/api/siteverify', data.encode('utf-8'))
+    if http_response.code != 200:
+        return False
+
+    json_resp = json.loads(http_response.read().encode('utf-8'))
+    if json_resp["success"]:
+        return True
+
+    return False

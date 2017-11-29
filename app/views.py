@@ -1,11 +1,21 @@
 import os
+import json
 import httplib
 import datetime
+import urllib2 as http
+from base64 import b64encode
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
+from werkzeug import url_encode
 from app import app
-from helpers import authentication_required
+from helpers import authentication_required, validate_recaptcha
 from models import Session, User, Post, Message, FileWrapper
 from templates import TemplateManager
+
+
+@app.before_request
+def csp_generate_nonce():
+    nonce = os.urandom(32)
+    g.csp_nonce = b64encode(nonce).decode('utf-8')
 
 
 @app.after_request
@@ -17,7 +27,14 @@ def apply_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # No downgrade attacks. Everything HTTPS
     response.headers['Strict-Transport-Security'] = 'max-age=31536000'
-    csp_policy = "default-src 'none'; font-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'self';"
+    csp_nonce = g.get('csp_nonce', '')
+    csp_policy = "default-src 'none'; " \
+                 "font-src 'self'; " \
+                 "style-src 'self' 'nonce-{0}'; " \
+                 "script-src 'self' 'nonce-{1}'; " \
+                 "img-src 'self'; " \
+                 "child-src www.google.com; " \
+                 "connect-src 'self';".format(csp_nonce, csp_nonce, csp_nonce)
     response.headers['Content-Security-Policy'] = csp_policy
     return response
 
@@ -74,18 +91,27 @@ def login():
 
         return TemplateManager.get_login_template()
     else:
-        username = request.form.get('username', "").strip()
-        password = request.form.get('password', "")
+        username = request.form['username'].strip()
+        password = request.form['password']
 
         user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
             # Already logged in
             return redirect(url_for('index'), code=httplib.SEE_OTHER)
 
+        if app.config.get('RECAPTCHA_ENABLED', False):
+            response = request.form.get('g-recaptcha-response', '')
+            if not response:
+                abort(httplib.BAD_REQUEST)
+
+            remote_ip = request.remote_addr
+            if not validate_recaptcha(response, remote_ip):
+                return TemplateManager.get_login_template(["Invalid Captcha"])
+
         user = User.check_password(username, password)
         if not user:
             return TemplateManager.get_login_template(
-                ["Invalid Login or password."])
+                ["Invalid Login or password"])
 
         result, session_token, csrf_token = Session.new_session(user)
         if not result:
@@ -125,6 +151,15 @@ def register():
         errors = []
         username = request.form['username'].strip()
         password = request.form['password']
+
+        if app.config.get('RECAPTCHA_ENABLED', False):
+            response = request.form.get('g-recaptcha-response', '')
+            if not response:
+                abort(httplib.BAD_REQUEST)
+
+            remote_ip = request.remote_addr
+            if not validate_recaptcha(response, remote_ip):
+                return TemplateManager.get_login_template(["Invalid Captcha"])
 
         errors = User.verify_credential_policy(username, password)
         if len(errors):
