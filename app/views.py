@@ -7,32 +7,6 @@ from helpers import authentication_required
 from models import Session, User, Post, Message, FileWrapper
 from templates import TemplateManager
 
-"""
-# Security considerations
-## Password storage/User authentication
-* concatenate password with random salt -> hash it -> store hash and salt in db
-* use slow/resource intensive hash algo (e.g. scrypt or bcrypt)
-* Sessions: generate random token -> set cookie. User presents cookie with token to authenticate requests
-* set Httponly flag in session cookie to prevent theft via js
-
-## SQL Injection
-* prepared statements for all sql queries
-
-## XSS Injection
-* escape/sanitize all user generated data before output
-* escaping depends on usage context
-* TODO: Escape before db insertion as well?
-    - Need to specify beforehand in which context the data will/can be used
-    - Double escape on output. We shouldn't rely on all data in the db being already escaped.
-* TODO: safeguard against forgotten output escaping
-
-## CSRF
-* TODO: Check headers to verify request is same origin
-    * Source: Origin or Referer header
-    * Target: Host or X-Forwarded-Host header
-    * Target must be source
-* TODO: second layer (double cookie, extra token,...)
-"""
 
 @app.after_request
 def apply_headers(response):
@@ -100,8 +74,8 @@ def login():
 
         return TemplateManager.get_login_template()
     else:
-        username = request.form['username'].strip()
-        password = request.form['password']
+        username = request.form.get('username', "").strip()
+        password = request.form.get('password', "")
 
         user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
         if user:
@@ -237,11 +211,24 @@ def administration():
 @app.route("/users/<int:id>", methods=['PUT', 'DELETE'])
 @authentication_required(admin=True)
 def user(id):
+    password = request.form.get('password', "")
+
+    salt = User.get_salt(g.user.username)
+    if not salt:
+        abort(httplib.UNAUTHORIZED)
+
+    _, hashed_password = User.create_hashed_password(salt, password)
+    user = User.get_and_validate_user(g.user.username, hashed_password)
+
+    if not user:
+        abort(httplib.UNAUTHORIZED)
+
     app.logger.debug("Request " + request.method)
     user = User.get_user_by_id(id)
     if not user:
         abort(httplib.NOT_FOUND)
 
+    #can't delete or demote other admins
     if user.is_admin:
         abort(httplib.UNAUTHORIZED)
 

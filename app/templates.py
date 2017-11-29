@@ -587,6 +587,10 @@ class TemplateManager(object):
                  "administration-main-template":
                  """
 <h1>Administration</h1>
+<div class="form">
+    <label for="admin_password_input">Please enter your password:</label>
+    <input type="password" name="admin_password_input" id="admin_password_input"/>
+</div>
 <ul class="list-group">
     ${user_list_group}
 </ul>

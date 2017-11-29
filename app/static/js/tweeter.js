@@ -35,6 +35,10 @@ function getCSRFToken() {
     return document.querySelector("meta[name='csrf-token']").getAttribute("content");
 }
 
+function getPasswordAdminInterface() {
+    return document.getElementById("admin_password_input").value;
+}
+
 /**
  * 
  * @param {number} userId 
@@ -42,7 +46,11 @@ function getCSRFToken() {
  * @returns {Promise}
  */
 function requestUserPromotion(userId, toAdmin) {
-    return doRequest(`/users/${userId}`, "PUT", {"is_admin" : toAdmin ? "1" : "0"});
+    let body = {
+        "is_admin" : toAdmin ? "1" : "0",
+        "password" : getPasswordAdminInterface()
+    };
+    return doRequest(`/users/${userId}`, "PUT", body);
 }
 
 /**
@@ -51,7 +59,10 @@ function requestUserPromotion(userId, toAdmin) {
  * @returns {Promise}
  */
 function requestUserDeletion(userId) {
-    return doRequest(`/users/${userId}`, "DELETE");
+    let body = {
+        "password" : getPasswordAdminInterface()
+    };
+    return doRequest(`/users/${userId}`, "DELETE", body);
 }
 
 /**
