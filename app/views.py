@@ -30,11 +30,11 @@ def apply_headers(response):
     csp_nonce = g.get('csp_nonce', '')
     csp_policy = "default-src 'none'; " \
                  "font-src 'self'; " \
-                 "style-src 'self' 'nonce-{0}'; " \
-                 "script-src 'self' 'nonce-{1}'; " \
+                 "style-src 'self' 'unsafe-inline'; " \
+                 "script-src 'self' 'nonce-{0}'; " \
                  "img-src 'self'; " \
                  "child-src www.google.com; " \
-                 "connect-src 'self';".format(csp_nonce, csp_nonce, csp_nonce)
+                 "connect-src 'self';".format(csp_nonce)
     response.headers['Content-Security-Policy'] = csp_policy
     return response
 
