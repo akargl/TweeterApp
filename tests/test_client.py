@@ -85,7 +85,8 @@ def test_seed_db(client):
 def test_unauthenticated_url_points_to_login(client):
     auth_urls_get = [
         '/',
-        '/messages'
+        '/messages',
+        '/deregister'
     ]
 
     for url in auth_urls_get:
@@ -236,11 +237,38 @@ def test_register_too_short_password(client):
     ))
     assert b'Invalid password length' in response.data
 
+def test_get_deregister(client):
+    login(client, 'root', 'root')
+
+    response = client.get('/deregister')
+
+    assert response.status_code == 200
+    assert b'Please enter your password to delete your account' in response.data
+
+def test_deregister_no_password(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/deregister')
+
+    assert response.status_code == 400
+
+
+def test_deregister_wrong_password(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/deregister', data=dict(
+        user_password='foo'
+    ))
+
+    assert response.status_code == 200
+    assert b'Invalid password' in response.data
 
 def test_deregister(client):
     login(client, 'root', 'root')
 
-    response = client.post('/deregister')
+    response = client.post('/deregister', data=dict(
+        user_password='root'
+    ))
 
     assert response.status_code == 302
     assert models.User.get_user_by_name('root') is None

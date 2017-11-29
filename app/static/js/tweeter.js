@@ -20,11 +20,6 @@ window.addEventListener("load", () => {
     if (logoutLink) {
         logoutLink.addEventListener("click", logoutClickHandler);
     }
-    
-    let deregisterLink = document.getElementById("deregister_link");
-    if (deregisterLink) {
-        deregisterLink.addEventListener("click", deregisterClickHandler);
-    }
 });
 
 /**
@@ -73,13 +68,6 @@ function requestLogout() {
 }
 
 /**
- * @returns {Promise}
- */
-function requestDeregistration() {
-    return doRequest("/deregister", "POST");
-}
-
-/**
  * 
  * @param {number} userId 
  * @param {boolean} toAdmin 
@@ -107,16 +95,6 @@ function administrationDeletionClickHandler(userId) {
  */
 function logoutClickHandler() {
     return requestLogout()
-        .then(() => {
-            document.location.reload();
-        });
-}
-
-/**
- * 
- */
-function deregisterClickHandler() {
-    return requestDeregistration()
         .then(() => {
             document.location.reload();
         });
