@@ -576,17 +576,17 @@ def test_update_user_no_admin(client):
     assert response.status_code == 401
 
 
-def test_update_user_no_admin(client):
+def test_update_user_not_existing(client):
     login(client, 'root', 'root')
 
-    response = client.put('/users/9999', data=dict({ 'is_admin': '1' }))
+    response = client.put('/users/9999', data=dict({ 'is_admin': '1', 'password' : 'root' }))
     assert response.status_code == 404
 
 
 def test_update_user_admin(client):
     login(client, 'root', 'root')
 
-    response = client.put('/users/2', data=dict({ 'is_admin': '1' }))
+    response = client.put('/users/2', data=dict({ 'is_admin': '1', 'password' : 'root' }))
 
     assert response.status_code == 204
     assert models.User.get_user_by_id(2).is_admin
@@ -599,17 +599,17 @@ def test_delete_user_no_admin(client):
     assert response.status_code == 401
 
 
-def test_delete_user_no_admin(client):
+def test_delete_user_not_existing(client):
     login(client, 'root', 'root')
 
-    response = client.delete('/users/9999')
+    response = client.delete('/users/9999', data=dict({ 'password' : 'root'}))
     assert response.status_code == 404
 
 
 def test_delete_user_admin(client):
     login(client, 'root', 'root')
 
-    response = client.delete('/users/2')
+    response = client.delete('/users/2', data=dict({ 'password' : 'root'}))
 
     assert response.status_code == 204
     assert models.User.get_user_by_id(2) == None
