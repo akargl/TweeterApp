@@ -1,8 +1,11 @@
 import httplib
+import json
+import urllib as http
 from functools import wraps
 from flask import g, request, redirect, url_for, abort
 from models import Session, User
 from app import app
+from werkzeug import url_encode
 from werkzeug.security import safe_str_cmp
 from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 
@@ -95,7 +98,7 @@ def validate_recaptcha(response, remote_ip):
         'response': response
     })
     http_response = http.urlopen('https://www.google.com/recaptcha/api/siteverify', data.encode('utf-8'))
-    if http_response.code != 200:
+    if http_response.code != httplib.OK:
         return False
 
     json_resp = json.loads(http_response.read().encode('utf-8'))
