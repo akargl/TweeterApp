@@ -92,9 +92,22 @@ To start the application, run the following command in the root folder of the ap
 python run.py
 ```
 
-Now the app will run on port 5000. Open a webbrowser and visit `https://localhost:5000`.
+Now the app will run on port 5000. Open a web browser and visit `https://127.0.0.1:5000`.
+Please consider that when running the app from `localhost` rather than from the
+IP address, CSP violation reports won't work. In this case, you will see an
+error like following in the browser shell.
+
+```
+POST https://sentry.io/api/252244/csp-report/?sentry_key=f79b05a88e324c20ba590c4034680917 403 (FORBIDDEN)
+```
 
 # Security Considerations
+
+## XSS
+
+### Optional Walls
+
+* CSP violations are reported to our [Sentry](https://sentry.io) instance
 
 ## Session Management
 
