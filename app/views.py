@@ -1,11 +1,8 @@
 import os
-import json
 import httplib
 import datetime
-import urllib2 as http
 from base64 import b64encode
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
-from werkzeug import url_encode
 from app import app
 from helpers import authentication_required, validate_recaptcha
 from models import Session, User, Post, Message, FileWrapper

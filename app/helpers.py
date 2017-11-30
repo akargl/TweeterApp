@@ -1,6 +1,6 @@
 import httplib
 import json
-import urllib as http
+import urllib2 as http
 from functools import wraps
 from flask import g, request, redirect, url_for, abort
 from models import Session, User
