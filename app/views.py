@@ -102,7 +102,7 @@ def login():
         if app.config.get('RECAPTCHA_ENABLED', False):
             response = request.form.get('g-recaptcha-response', '')
             if not response:
-                abort(httplib.BAD_REQUEST)
+                return TemplateManager.get_login_template(["Invalid Captcha"])
 
             remote_ip = request.remote_addr
             if not validate_recaptcha(response, remote_ip):
@@ -155,11 +155,11 @@ def register():
         if app.config.get('RECAPTCHA_ENABLED', False):
             response = request.form.get('g-recaptcha-response', '')
             if not response:
-                abort(httplib.BAD_REQUEST)
+                return TemplateManager.get_register_template(["Invalid Captcha"])
 
             remote_ip = request.remote_addr
             if not validate_recaptcha(response, remote_ip):
-                return TemplateManager.get_login_template(["Invalid Captcha"])
+                return TemplateManager.get_register_template(["Invalid Captcha"])
 
         errors = User.verify_credential_policy(username, password)
         if len(errors):
