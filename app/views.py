@@ -26,7 +26,7 @@ def apply_headers(response):
     response.headers['Strict-Transport-Security'] = 'max-age=31536000'
     csp_nonce = g.get('csp_nonce', '')
     csp_policy = "default-src 'none'; " \
-                 "font-src 'self'; " \
+                 "font-src 'self' data:; " \
                  "style-src 'self' 'unsafe-hashed-attributes' 'sha256-MammJ3J+TGIHdHxYsGLjD6DzRU0ZmxXKZ2DvTePAF0o=' 'sha256-6iA6WDOL1mgUULZ6GSs2OOfP4eMuu6iI5agxCjK2m2A=' 'sha256-+zzuded9+DHoztKyASJeCkVU0gxvYNWMUIQM7x//CB4=' 'sha256-ldCXMle1JJUAD9eAjLdSuPIgIBcTcBecWlaXs0A2y4M=' 'sha256-WCg1a4AhMGgFRCQG5w+hgG+Q2j8Ygrbd+2dgjByIOIU=' 'sha256-Awu6hl63MCY3jiYHaDclrL7Lic9KcEalXm2o/i3e0v8='; " \
                  "script-src 'self' 'nonce-{0}'; " \
                  "img-src 'self'; " \
