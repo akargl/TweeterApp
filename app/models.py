@@ -30,10 +30,11 @@ class User:
     HASH_ALGO = 'sha256'
     HASH_ITERATIONS = 50000
 
-    def __init__(self, id, username, is_admin):
+    def __init__(self, id, username, email, is_admin):
         self.id = id
         self.username = username
         self.is_admin = is_admin
+        self.email = email
 
     def serialize(self):
         return {
@@ -42,6 +43,20 @@ class User:
             'is_admin': self.is_admin,
         }
 
+    def update_password(self, new_password):
+        errors = User.verify_password_policy(new_password)
+        if len(errors):
+            return errors
+
+        salt, hashed_pw = User.create_salt_and_hashed_password(new_password)
+
+        result = insert_db('UPDATE Users SET password_salt = ?, password_token = ? WHERE id = ?', [
+                           salt, hashed_pw, self.id])
+        # TODO: Update sessions?
+        if not result:
+            return ['Could not reset password']
+        return []
+        
     @staticmethod
     def similar(a, b):
         return SequenceMatcher(None, a, b).ratio()
@@ -51,25 +66,32 @@ class User:
         return any(ord(c) >= 128 for c in s)
 
     @staticmethod
-    def verify_credential_policy(username, password):
-        """ Checks against the password policy """
+    def verify_password_policy(password):
         errors = []
-        if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
-            errors.append(
-                'Length of username invalid. Maximum length: {:d}'.format(
-                    User.MAX_USERNAME_LEN))
         if len(password) < User.MIN_PASSWORD_LEN or len(
                 password) > User.MAX_PASSWORD_LEN:
             errors.append(
                 'Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(
                     User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
-        if User.similar(username, password) > 0.8:
-            errors.append('Password cannot be the same or similar as the username')
         if User.contains_non_ascii(password):
             errors.append('Password cannot contain non-ASCII characters')
+        return errors
+
+    @staticmethod
+    def verify_credential_policy(username, password):
+        """ Checks against the user and password policy """
+        errors = []
+        if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
+            errors.append(
+                'Length of username invalid. Maximum length: {:d}'.format(
+                    User.MAX_USERNAME_LEN))
+        
+        if User.similar(username, password) > 0.8:
+            errors.append('Password cannot be the same or similar as the username')
         if not re.match("^[A-Za-z0-9_-]*$", username):
             errors.append(
                 'Username must only contain letters, numbers, and underscores')
+        errors.append(User.verify_password_policy(password))
         return errors
 
     @staticmethod
@@ -79,7 +101,7 @@ class User:
             return []
         users = []
         for r in result:
-            users.append(User(r['id'], r['username'], bool(r['is_admin'])))
+            users.append(User(r['id'], r['username'], r['email'], bool(r['is_admin'])))
         return users
 
     @staticmethod
@@ -123,7 +145,7 @@ class User:
         if user_data is None:
             return None
         return User(user_data['id'], user_data[
-                    'username'], bool(user_data['is_admin']))
+                    'username'], user_data['email'], bool(user_data['is_admin']))
 
     @staticmethod
     def get_user_by_name(username):
@@ -134,7 +156,18 @@ class User:
         if user_data is None:
             return None
         return User(user_data['id'], user_data[
-                    'username'], user_data['is_admin'])
+                    'username'], user_data['email'], user_data['is_admin'])
+
+    @staticmethod
+    def get_user_by_email(email):
+        user_data = query_db(
+            'SELECT * from Users WHERE email = ?',
+            [email],
+            one=True)
+        if user_data is None:
+            return None
+        return User(user_data['id'], user_data[
+                    'username'], user_data['email'], user_data['is_admin'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
@@ -148,7 +181,7 @@ class User:
                 user_data['password_token'], hashed_password):
             return None
         return User(user_data['id'], user_data[
-                    'username'], user_data['is_admin'])
+                    'username'], user_data['email'], user_data['is_admin'])
 
     @staticmethod
     def get_salt(username):
@@ -161,15 +194,18 @@ class User:
         return salt['password_salt']
 
     @staticmethod
-    def create(username, salt, hashed_password, is_admin=False):
+    def create(username, email, salt, hashed_password, is_admin=False):
         # usernames are case insensitive so we need to check first regardless
         # of unique constraint
         if User.get_user_by_name(username):
-            app.logger.debug("User already exists")
+            app.logger.debug("Username already exists")
+            return None
+        if User.get_user_by_email(email):
+            app.logger.debug("Email already exists")
             return None
         result = insert_db(
-            'INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [
-                username, salt, hashed_password, int(is_admin)])
+            'INSERT into Users (username, email, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?, ?)', [
+                username, email, salt, hashed_password, int(is_admin)])
         if not result:
             return None
         return User.get_user_by_name(username)
@@ -177,7 +213,7 @@ class User:
     def delete(self):
         app.logger.debug("Delete user with id {:d}".format(self.id))
         # Delete user. All dependent data is deleted via database cascading
-        insert_db('DELETE FROM Users WHERE id = ?', [self.id])
+        return insert_db('DELETE FROM Users WHERE id = ?', [self.id])
 
     def change_role(self, is_admin):
         if self.is_admin == is_admin:
@@ -461,3 +497,53 @@ class FileWrapper:
         app.logger.debug("Saving attachment to {:s}".format(storage_path))
         imgfile.save(storage_path)
         return f_wrapper
+
+
+class PasswordRecoveryTokens:
+    EXPIRY_HOUR = 1
+
+    def __init__(id, token, user, timestamp):
+        self.id = id
+        self.token = token
+        self.user = user
+        self.timestamp = datetime.fromtimestamp(timestamp)
+
+    def has_expired(self):
+        return self.timestamp < datetime.datetime.today() - datetime.timedelta(hours=self.EXPIRY_HOUR)
+
+    def delete(self):
+        return insert_db('DELETE FROM PasswordRecoveryTokens WHERE id = ?', [self.id])
+
+    @staticmethod
+    def clear():
+        return insert_db('DELETE * FROM PasswordRecoveryTokens')
+
+    @staticmethod
+    def create(user):
+        token = os.urandom(32)
+        token = b64encode(token, '-_')
+
+        hash_object = hashlib.sha512(token)
+        hashed_token = hash_object.hexdigest()
+        hashed_token = b64encode(hashed_token)
+
+        status = insert_db('INSERT into PasswordRecoveryTokens (user_id, token, timestamp) VALUES (?, ?, ?)', [user.id, hashed_token, int(time.time())])
+        if status:
+            return token
+        else:
+            return None
+
+    @staticmethod
+    def get_user_for_token(token):
+        hash_object = hashlib.sha512(token)
+        hashed_token = hash_object.hexdigest()
+        hashed_token = b64encode(hashed_token)
+
+        # TODO: Check if token is valid based on the time
+        resp = query_db('SELECT user_id from PasswordRecoveryTokens WHERE token = ?', [hashed_token], one=True)
+        if not resp:
+            return None
+
+        user = User.get_user_by_id(resp['user_id'])
+        return user
+

@@ -1,11 +1,12 @@
 import os
 import httplib
 import datetime
+import requests
 from base64 import b64encode
-from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
+from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify, flash
 from app import app
 from helpers import authentication_required, validate_recaptcha, unautenticated_csrf_protection
-from models import Session, User, Post, Message, FileWrapper
+from models import Session, User, Post, Message, FileWrapper, PasswordRecoveryTokens
 from templates import TemplateManager
 
 
@@ -138,6 +139,59 @@ def login():
         return response
 
 
+@app.route("/reset_password", methods=['GET', 'POST'])
+def reset_password():
+    if request.method == 'GET':
+        return TemplateManager.get_reset_password_template()
+    elif request.method == 'POST':
+        email = request.form['email'].strip()
+
+        user = User.get_user_by_email(email)
+        if user:
+            token = PasswordRecoveryTokens.create(user)
+            if not token:
+                return
+
+            app.logger.debug("Token is {:s}".format(token.token))
+            
+            key = 'key-3092d1f7006c44cbc64c2aa22f700c0d'
+            request_url = 'https://api.mailgun.net/v3/sandboxb047e885447c44809620ff0b68b4d6ce.mailgun.org/messages'
+            
+            request = requests.post(request_url, auth=('api', key), data={
+                'from': 'noreply@tweeterapp.com',
+                'to': user.email,
+                'subject': 'Tweeter - Password Recovery Token',
+                'html': '<a href={:s}/update_password/{:s}>Reset your password by clicking this link</a>'.format(request.host, token)
+            })
+       
+        # First step create a random token
+        # Store this token associated with the user
+        # Send this url with token,
+        # build a view view where the user can enter the new password
+        app.logger.debug('If your email address exists in our database, you will receive a password recovery link at your email address in a few minutes.')
+        return redirect(url_for('index'))
+
+
+@app.route("/update_password/<token>", methods=['GET', 'POST'])
+def update_password(token):
+    token = PasswordRecoveryTokens.get_token(token)
+    if not token:
+        app.logger.debug('Invalid reset token')
+        return redirect(url_for('login'))
+
+    if request.method == 'GET':
+        return TemplateManager.get_update_password_template(token.token)
+    elif request.method == 'POST':
+        password = request.form['password']
+        errors = user.update_password(password)
+        if len(errors):
+            app.logger.debug(errors)
+            app.logger.debug('Could not update password')
+        # Delete the used token
+        token.delete()
+        return redirect(url_for('login'))
+
+
 @app.route("/logout", methods=['POST'])
 @authentication_required()
 def logout():
@@ -160,6 +214,7 @@ def register():
     else:
         errors = []
         username = request.form['username'].strip()
+        email = request.form['email'].strip()
         password = request.form['password']
 
         if app.config.get('RECAPTCHA_ENABLED', False):
@@ -176,7 +231,7 @@ def register():
             return TemplateManager.get_register_template(errors)
 
         salt, hashed_password = User.create_salt_and_hashed_password(password)
-        user = User.create(username, salt, hashed_password)
+        user = User.create(username, email, salt, hashed_password)
         if user is None:
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)

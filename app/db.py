@@ -70,12 +70,12 @@ def seed_test_db():
     Message.create(2, 1, 'My message', None)
 
 
-def create_user(username, password, is_admin):
+def create_user(username, password, email, is_admin):
     # Import user only here to avoid a circular dependency
     from models import User
 
     salt, hashed_password = User.create_salt_and_hashed_password(password)
-    user = User.create(username, salt, hashed_password, is_admin)
+    user = User.create(username, email, salt, hashed_password, is_admin)
     return user
 
 
@@ -119,12 +119,12 @@ def seed_db():
     from models import Post, Message, FileWrapper
 
     user_seed = [
-        ('root', 'root', True),
-        ('admin', 'admin', True),
-        ('Max', 'max_password_123', False),
-        ('Alex', 'alex_password_123', False),
-        ('Robert', 'robert_password_123', False),
-        ('Anna', 'anna_password_123', False),
+        ('root', 'root', 'root@rschilling.net', True),
+        ('admin', 'admin', 'admin@rschilling.net', True),
+        ('Max', 'max_password_123', 'max@rschilling.net', False),
+        ('Alex', 'alex_password_123', 'alexroot@rschilling.net', False),
+        ('Robert', 'robert_password_123', 'robert@rschilling.net', False),
+        ('Anna', 'anna_password_123', 'anna@rschilling.net', False),
     ]
     nr_public_posts = 100
     nr_private_posts = 100
@@ -137,6 +137,8 @@ def seed_db():
         if user:
             users.append(user)
             print_dot()
+        else:
+            print('Failed to create user')
 
     print('\nCreating public posts')
     # Create public posts for each user
@@ -187,9 +189,9 @@ def insert_db(query, args=()):
     try:
         cur = get_db().execute(query, args)
         get_db().commit()
-        lastId = cur.lastrowid
+        rowcount = cur.rowcount
         cur.close()
-        return lastId
+        return rowcount
     except sqlite3.Error as e:
         app.logger.debug('sqlite3 error ' + e.message)
         return None
@@ -200,6 +202,7 @@ def clear_sessions():
     if not app.config.get('DEBUG', True):
         from models import Session
         Session.clear()
+        PasswordRecoveryTokens.clear()
 
 
 @app.teardown_appcontext
