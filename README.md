@@ -118,3 +118,7 @@ POST https://sentry.io/api/252244/csp-report/?sentry_key=f79b05a88e324c20ba590c4
 * No content data in the session cookie
   * No encryption needed
   * Cookie is signed. So the attacker cannot change the expiry date
+
+## Deployment
+
+* We encrypt the database
