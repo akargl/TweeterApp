@@ -105,3 +105,7 @@ Now the app will run on port 5000. Open a webbrowser and visit `https://localhos
 * No content data in the session cookie
   * No encryption needed
   * Cookie is signed. So the attacker cannot change the expiry date
+
+## Deployment
+
+* We encrypt the database

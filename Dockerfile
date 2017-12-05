@@ -9,7 +9,7 @@ WORKDIR /home/tweeter
 
 RUN openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365 -batch
 
-COPY requirements.txt /home/tweeter
+COPY requirements.txt /home/tweeter 
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the source code into the container
