@@ -1,5 +1,5 @@
 from string import Template
-from flask import url_for, g
+from flask import url_for, g, get_flashed_messages
 from models import User
 from app import app
 import datetime
@@ -46,6 +46,12 @@ class TemplateManager(object):
             TemplateManager.escape_for_html_element_context(e) for e in errors]
         return "\n".join(TemplateManager.get_template(
             "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
+
+    @staticmethod
+    def render_messages(messages):
+        escaped_messages = [TemplateManager.escape_for_html_element_context(m) for m in messages]
+        return "\n".join(TemplateManager.get_template(
+            "alert-template", {"alert_type": "alert-info", "alert_content": m}) for m in escaped_messages)
 
     @staticmethod
     def get_register_template(errors=[]):
@@ -99,15 +105,9 @@ class TemplateManager(object):
 
     @staticmethod
     def get_login_template(errors=[]):
-<<<<<<< HEAD
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
-
-        recaptcha_template = TemplateManager.get_recaptcha_template()
-=======
         alerts = TemplateManager.render_errors(errors)
- 
->>>>>>> Start with password reset implementation
+        alerts += TemplateManager.render_messages(get_flashed_messages())
+
         login_template = TemplateManager.get_template(
             "login-template", {
                 "form_target": url_for('login'),

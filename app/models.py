@@ -3,6 +3,7 @@ import re
 import hashlib
 import time
 import imghdr
+from datetime import datetime
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
@@ -52,8 +53,9 @@ class User:
 
         result = insert_db('UPDATE Users SET password_salt = ?, password_token = ? WHERE id = ?', [
                            salt, hashed_pw, self.id])
+        app.logger.debug(result is None)
         # TODO: Update sessions?
-        if not result:
+        if result is None:
             return ['Could not reset password']
         return []
         
@@ -502,7 +504,7 @@ class FileWrapper:
 class PasswordRecoveryTokens:
     EXPIRY_HOUR = 1
 
-    def __init__(id, token, user, timestamp):
+    def __init__(self, id, token, user, timestamp):
         self.id = id
         self.token = token
         self.user = user
@@ -516,16 +518,20 @@ class PasswordRecoveryTokens:
 
     @staticmethod
     def clear():
-        return insert_db('DELETE * FROM PasswordRecoveryTokens')
+        return insert_db('DELETE FROM PasswordRecoveryTokens')
+
+    @staticmethod
+    def hash_token(token):
+        hash_object = hashlib.sha512(token)
+        hashed_token = hash_object.hexdigest()
+        hashed_token = b64encode(hashed_token)
+        return hashed_token
 
     @staticmethod
     def create(user):
         token = os.urandom(32)
         token = b64encode(token, '-_')
-
-        hash_object = hashlib.sha512(token)
-        hashed_token = hash_object.hexdigest()
-        hashed_token = b64encode(hashed_token)
+        hashed_token = PasswordRecoveryTokens.hash_token(token)
 
         status = insert_db('INSERT into PasswordRecoveryTokens (user_id, token, timestamp) VALUES (?, ?, ?)', [user.id, hashed_token, int(time.time())])
         if status:
@@ -534,16 +540,18 @@ class PasswordRecoveryTokens:
             return None
 
     @staticmethod
-    def get_user_for_token(token):
-        hash_object = hashlib.sha512(token)
-        hashed_token = hash_object.hexdigest()
-        hashed_token = b64encode(hashed_token)
+    def get_token(token):
+        hashed_token = PasswordRecoveryTokens.hash_token(token)
 
         # TODO: Check if token is valid based on the time
-        resp = query_db('SELECT user_id from PasswordRecoveryTokens WHERE token = ?', [hashed_token], one=True)
+        resp = query_db('SELECT * from PasswordRecoveryTokens WHERE token = ?', [hashed_token], one=True)
         if not resp:
+            app.logger.debug('Could not find the token')
             return None
 
         user = User.get_user_by_id(resp['user_id'])
-        return user
+        if not user:
+            app.logger.debug('Could not find the user')
+            return None
+        return PasswordRecoveryTokens(resp['id'], token, user, resp['timestamp'])
 

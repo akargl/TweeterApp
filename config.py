@@ -1,6 +1,7 @@
 DEBUG = True
 DATABASE = 'database.db'
 DATABASE_KEY_FILE = 'database.key'
+DATABASE_ENCRYPT = True
 UPLOAD_FOLDER = 'uploads'
 IMAGE_EXTENSIONS = set(['.png', '.jpg', '.jpeg'])
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024

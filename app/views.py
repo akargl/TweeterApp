@@ -5,7 +5,7 @@ import requests
 from base64 import b64encode
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify, flash
 from app import app
-from helpers import authentication_required, validate_recaptcha, unautenticated_csrf_protection
+from helpers import authentication_required, validate_recaptcha, already_logged_in, unautenticated_csrf_protection
 from models import Session, User, Post, Message, FileWrapper, PasswordRecoveryTokens
 from templates import TemplateManager
 
@@ -94,23 +94,16 @@ def index():
 @app.route("/login", methods=['GET', 'POST'])
 @unautenticated_csrf_protection
 def login():
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
+        return redirect(url_for('index'))
+
     # Post: params[username, password]
     if request.method == 'GET':
-        # If the user is already logged in, just display the index
-        user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
-        if user:
-            # Already logged in
-            return redirect(url_for('index'))
-
         return TemplateManager.get_login_template()
     else:
         username = request.form['username'].strip()
         password = request.form['password']
-
-        user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
-        if user:
-            # Already logged in
-            return redirect(url_for('index'), code=httplib.SEE_OTHER)
 
         if app.config.get('RECAPTCHA_ENABLED', False):
             response = request.form.get('g-recaptcha-response', '')
@@ -131,7 +124,8 @@ def login():
             return TemplateManager.get_login_template(
                 ["Could not create session"])
 
-        # Make the response and set the cookie
+        # Make the resp
+        # onse and set the cookie
         url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
 
@@ -141,6 +135,10 @@ def login():
 
 @app.route("/reset_password", methods=['GET', 'POST'])
 def reset_password():
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
+        return redirect(url_for('index'))
+
     if request.method == 'GET':
         return TemplateManager.get_reset_password_template()
     elif request.method == 'POST':
@@ -152,42 +150,43 @@ def reset_password():
             if not token:
                 return
 
-            app.logger.debug("Token is {:s}".format(token.token))
-            
-            key = 'key-3092d1f7006c44cbc64c2aa22f700c0d'
-            request_url = 'https://api.mailgun.net/v3/sandboxb047e885447c44809620ff0b68b4d6ce.mailgun.org/messages'
-            request = requests.post(request_url, auth=('api', key), data={
-                'from': 'noreply@tweeterapp.com',
-                'to': user.email,
-                'subject': 'Tweeter - Password Recovery Token',
-                'html': '<a href={:s}/update_password/{:s}>Reset your password by clicking this link</a>'.format(request.host, token)
-            })
-       
+            app.logger.debug("Token is {:s}".format(token))
+            # TODO: Send email via gmail
+
         # First step create a random token
         # Store this token associated with the user
         # Send this url with token,
         # build a view view where the user can enter the new password
-        app.logger.debug('If your email address exists in our database, you will receive a password recovery link at your email address in a few minutes.')
-        return redirect(url_for('index'))
+        flash('If your email address exists in our database, you will receive a password recovery link at your email address in a few minutes.')
+        return redirect(url_for('login'))
 
 
 @app.route("/update_password/<token>", methods=['GET', 'POST'])
 def update_password(token):
+    app.logger.debug('my token is ' + token)
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
+        return redirect(url_for('index'))
+
     token = PasswordRecoveryTokens.get_token(token)
     if not token:
-        app.logger.debug('Invalid reset token')
+        app.logger.debug('Invalid recovery token')
+        flash('Invalid recovery token')
         return redirect(url_for('login'))
 
     if request.method == 'GET':
         return TemplateManager.get_update_password_template(token.token)
     elif request.method == 'POST':
         password = request.form['password']
-        errors = user.update_password(password)
+        errors = token.user.update_password(password)
+
         if len(errors):
-            app.logger.debug(errors)
-            app.logger.debug('Could not update password')
+            [app.logger.debug(e) for e in errors]
+            return TemplateManager.get_update_password_template(token.token, errors)
+
         # Delete the used token
         token.delete()
+        flash('Passwort has been changed. Please login with your new password.')
         return redirect(url_for('login'))
 
 
@@ -202,10 +201,9 @@ def logout():
 @app.route("/register", methods=['GET', 'POST'])
 @unautenticated_csrf_protection
 def register():
-    # Post: params[username, password]
-    user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
-    if user:
-        # Already logged in
+    # Post: params[username, password
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
         return redirect(url_for('index'))
 
     if request.method == 'GET':

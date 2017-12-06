@@ -162,3 +162,8 @@ def validate_recaptcha(response, remote_ip):
         return True
 
     return False
+
+
+def already_logged_in(request):
+    user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
+    return user is not None

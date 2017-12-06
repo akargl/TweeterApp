@@ -10,6 +10,10 @@ from werkzeug.datastructures import FileStorage
 from app import app
 from helpers import get_or_create_key
 
+if app.config.get('DATABASE_ENCRYPT', True):
+    from pysqlcipher import dbapi2 as sqlite3
+else:
+    import sqlite3
 
 # Based on the flask sqlite tutorial
 # (http://flask.pocoo.org/docs/0.12/patterns/sqlite3/)
@@ -20,7 +24,8 @@ def get_db():
     if db is None:
         db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
-        query_db("PRAGMA key='{:s}'".format(get_or_create_key(app.config['DATABASE_KEY_FILE'])))
+        if app.config.get('DATABASE_ENCRYPT', True):
+            query_db("PRAGMA key='{:s}'".format(get_or_create_db_key()))
         query_db('PRAGMA foreign_keys = ON')
     return db
 
@@ -203,6 +208,8 @@ def insert_db(query, args=()):
 
         if rowcount == 0:
             return None
+        if not last_id:
+            return rowcount
         return last_id
     except sqlite3.Error as e:
         import traceback
