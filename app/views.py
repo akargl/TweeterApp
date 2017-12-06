@@ -156,7 +156,6 @@ def reset_password():
             
             key = 'key-3092d1f7006c44cbc64c2aa22f700c0d'
             request_url = 'https://api.mailgun.net/v3/sandboxb047e885447c44809620ff0b68b4d6ce.mailgun.org/messages'
-            
             request = requests.post(request_url, auth=('api', key), data={
                 'from': 'noreply@tweeterapp.com',
                 'to': user.email,

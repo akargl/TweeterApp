@@ -91,7 +91,7 @@ class User:
         if not re.match("^[A-Za-z0-9_-]*$", username):
             errors.append(
                 'Username must only contain letters, numbers, and underscores')
-        errors.append(User.verify_password_policy(password))
+        errors += User.verify_password_policy(password)
         return errors
 
     @staticmethod

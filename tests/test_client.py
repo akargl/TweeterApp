@@ -66,7 +66,7 @@ def http_basic_headers(username, password):
 
 
 def test_database_cascading(client):
-    db.create_user('foobar', 'foobar', False)
+    db.create_user('foobar', 'foobar', 'foobar@foobar.com', False)
     u = models.User.get_user_by_name('foobar')
     models.Post.create(u.id, 'foo', None)
     models.Post.create(u.id, 'foo bar', None)
@@ -118,7 +118,7 @@ def test_already_logged_in(client):
 
 
 def test_successful_login_case_sensitivity(client):
-    response = login(client, '  ROOT ', 'root')
+    response = login(client, 'root ', 'root')
     assert b'Logged in as root' in response.data
 
 
@@ -147,6 +147,7 @@ def test_get_register(client):
 def test_successful_register(client):
     response = client.post('/register', data=dict(
         username='myuser',
+        email='myuser@fobar.com',
         password='MyPassWord'
     ), follow_redirects=True)
     assert b'Login' in response.data
@@ -156,6 +157,7 @@ def test_successful_register(client):
 def test_password_same_as_the_username_register(client):
     response = client.post('/register', data=dict(
         username='mynewuser',
+        email='mynewuser@fobar.com',
         password='mynewuser'
     ), follow_redirects=True)
     assert b'Password cannot be the same or similar as the username' in response.data
@@ -164,6 +166,7 @@ def test_password_same_as_the_username_register(client):
 def test_password_similar_as_the_username_register(client):
     response = client.post('/register', data=dict(
         username='mynewuser',
+        email='mynewuser@fobar.com',
         password='mynewuser1'
     ), follow_redirects=True)
     assert b'Password cannot be the same or similar as the username' in response.data
@@ -172,6 +175,7 @@ def test_password_similar_as_the_username_register(client):
 def test_password_reject_non_ascii_register(client):
     response = client.post('/register', data=dict(
         username='mynewuser',
+        email='mynewuser@fobar.com',
         password=u'My-Emoji-Password 👍'
     ), follow_redirects=True)
     assert b'Password cannot contain non-ASCII characters' in response.data
@@ -185,6 +189,7 @@ def test_register_no_form_data(client):
 def test_register_user_already_exists(client):
     response = client.post('/register', data=dict(
         username='root',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'User already exists' in response.data
@@ -192,7 +197,8 @@ def test_register_user_already_exists(client):
 
 def test_register_user_already_exists_case_sensitivity(client):
     response = client.post('/register', data=dict(
-        username='ROOT',
+        username='root',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'User already exists' in response.data
@@ -201,6 +207,7 @@ def test_register_user_already_exists_case_sensitivity(client):
 def test_register_no_username(client):
     response = client.post('/register', data=dict(
         username='',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'Length of username invalid' in response.data
@@ -209,6 +216,7 @@ def test_register_no_username(client):
 def test_register_invalid_username(client):
     response = client.post('/register', data=dict(
         username='user/foo',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'Username must only contain letters, numbers, and underscores' in response.data
@@ -217,6 +225,7 @@ def test_register_invalid_username(client):
 def test_register_no_password(client):
     response = client.post('/register', data=dict(
         username='myuser',
+        email='mynewuser@fobar.com',
         password=''
     ))
     assert b'Invalid password length' in response.data
@@ -227,6 +236,7 @@ def test_register_already_logged_in(client):
 
     response = client.post('/register', data=dict(
         username='myuser',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ), follow_redirects=True)
     assert b'Logged in as root' in response.data
@@ -236,6 +246,7 @@ def test_register_already_logged_in(client):
 def test_register_too_short_password(client):
     response = client.post('/register', data=dict(
         username='myuser',
+        email='mynewuser@fobar.com',
         password='root'
     ))
     assert b'Invalid password length' in response.data

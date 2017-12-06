@@ -64,8 +64,8 @@ def seed_test_db():
     """ Seed the database for testing purpose """
     from models import Post, Message
 
-    create_user('root', 'root', True)
-    create_user('foo', 'mypassword', False)
+    create_user('root', 'root', 'root@root.com',  True)
+    create_user('foo', 'mypassword', 'foo@root.com', False)
     Post.create(1, 'My news', None)
     Message.create(2, 1, 'My message', None)
 
@@ -76,6 +76,7 @@ def create_user(username, password, email, is_admin):
 
     salt, hashed_password = User.create_salt_and_hashed_password(password)
     user = User.create(username, email, salt, hashed_password, is_admin)
+
     return user
 
 
@@ -85,6 +86,8 @@ def create_entry(permitted_user_ids, private):
     #   * image only
     #   * text and image
     from models import FileWrapper, MAX_CONTENT_LENGTH
+
+    print(permitted_user_ids, private)
 
     def shorten(data):
         return (data[:MAX_CONTENT_LENGTH] +
@@ -138,6 +141,7 @@ def seed_db():
             users.append(user)
             print_dot()
         else:
+            print(u)
             print('Failed to create user')
 
     print('\nCreating public posts')
@@ -153,6 +157,8 @@ def seed_db():
         random.shuffle(users)
         author = users[0]
         recipient = users[1]
+
+        print([author.id, recipient.id])
 
         sentence, filename = create_entry([author.id, recipient.id], True)
         Message.create(author.id, recipient.id, sentence, filename)
@@ -187,12 +193,20 @@ def query_db(query, args=(), one=False):
 
 def insert_db(query, args=()):
     try:
+        app.logger.debug('Query: ' + query)
+        app.logger.debug(args)
         cur = get_db().execute(query, args)
         get_db().commit()
         rowcount = cur.rowcount
+        last_id = cur.lastrowid
         cur.close()
-        return rowcount
+
+        if rowcount == 0:
+            return None
+        return last_id
     except sqlite3.Error as e:
+        import traceback
+        traceback.print_exc()
         app.logger.debug('sqlite3 error ' + e.message)
         return None
 
