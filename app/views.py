@@ -144,6 +144,10 @@ def reset_password():
     elif request.method == 'POST':
         email = request.form['email'].strip()
 
+        errors = User.validate_email(email)
+        if len(errors):
+            return TemplateManager.get_reset_password_template(errors)
+
         user = User.get_user_by_email(email)
         if user:
             token = PasswordRecoveryTokens.create(user)
@@ -223,7 +227,7 @@ def register():
             if not validate_recaptcha(response, remote_ip):
                 return TemplateManager.get_register_template(["Invalid Captcha"])
 
-        errors = User.verify_credential_policy(username, password)
+        errors = User.verify_credential_policy(username, email, password)
         if len(errors):
             return TemplateManager.get_register_template(errors)
 
