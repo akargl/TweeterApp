@@ -1,10 +1,10 @@
 import os
 import httplib
 import datetime
-import requests
 from base64 import b64encode
+import flask_mail
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify, flash
-from app import app
+from app import app, mail
 from helpers import authentication_required, validate_recaptcha, already_logged_in, unautenticated_csrf_protection
 from models import Session, User, Post, Message, FileWrapper, PasswordRecoveryTokens
 from templates import TemplateManager
@@ -154,13 +154,13 @@ def reset_password():
             if not token:
                 return
 
-            app.logger.debug("Token is {:s}".format(token))
-            # TODO: Send email via gmail
+            # Send a password recovery token via email
+            msg = flask_mail.Message("Tweeter - Password Recovery",
+                  sender="tweeterappmailer@gmail.com",
+                  recipients=[user.email])
+            msg.html = 'To reset your password click <a href="https://{:s}/update_password/{:s}">here</a>'.format(request.host, token)
+            mail.send(msg)
 
-        # First step create a random token
-        # Store this token associated with the user
-        # Send this url with token,
-        # build a view view where the user can enter the new password
         flash('If your email address exists in our database, you will receive a password recovery link at your email address in a few minutes.')
         return redirect(url_for('login'))
 

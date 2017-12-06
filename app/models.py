@@ -352,9 +352,7 @@ class Session:
 
     @staticmethod
     def clear():
-        users = User.get_all()
-        for u in users:
-            Session.delete_all(u.id)
+        insert_db('DELETE FROM Sessions')
 
     @staticmethod
     def active_user(session_token):
