@@ -26,10 +26,7 @@ class TemplateManager(object):
         return unsafe
 
     @staticmethod
-    def get_register_template(errors=[]):
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
-
+    def get_recaptcha_template():
         if app.config.get('RECAPTCHA_ENABLED', False):
             attrs = {
                 'sitekey': app.config.get('RECAPTCHA_PUBLIC_KEY', '')
@@ -41,7 +38,14 @@ class TemplateManager(object):
             )
         else:
             recaptcha_template = ""
+        return recaptcha_template
 
+    @staticmethod
+    def get_register_template(errors=[]):
+        escaped_errors = [
+            TemplateManager.escape_for_html_element_context(e) for e in errors]
+
+        recaptcha_template = TemplateManager.get_recaptcha_template()
         register_template = TemplateManager.get_template(
             "register-template", {"form_target": url_for('register'), "recaptcha": recaptcha_template})
 
@@ -94,18 +98,7 @@ class TemplateManager(object):
         escaped_errors = [
             TemplateManager.escape_for_html_element_context(e) for e in errors]
 
-        if app.config.get('RECAPTCHA_ENABLED', False):
-            attrs = {
-                'sitekey': app.config.get('RECAPTCHA_PUBLIC_KEY', '')
-            }
-            snippet = u' '.join([u'data-%s="%s"' % (k, attrs[k]) for k in attrs])
-
-            recaptcha_template = TemplateManager.get_template(
-                "recaptcha-template", {"snippet" : snippet, "nonce": g.get('csp_nonce', '')}
-            )
-        else:
-            recaptcha_template = ""
-
+        recaptcha_template = TemplateManager.get_recaptcha_template()
         login_template = TemplateManager.get_template(
             "login-template", {"form_target": url_for('login'), "recaptcha": recaptcha_template})
 
