@@ -123,14 +123,23 @@ This section states the implemented security feautues. We list and comment the [
 
 ## Session Management
 
-* Session cookie is 32 characters long (random) and gets signed with the application key for server-side date expiration
-* Session cookie is set to `secure` and `HTTPOnly`
-* Session cookie has a server-side timeout of 7 days
-* Session cookie has a client-side expiry date of 7 days
-* No content data in the session cookie
-  * No encryption needed
-  * Cookie is signed. So the attacker cannot change the expiry date
+* [3 points] Unique unguessable session identifier (cryptographically random, long enough) in cookie and state on server; or authenticated session state in cookie
+  * Session cookie is 32 characters long (random) and gets signed with the application key for server-side date expiration
+* [1 point] Cookies need to be protected
+  * HttpOnly flag
+  * Secure flag
+  * Session cookie is set to `secure` and `HTTPOnly`
+* [1 point] Check your deserialization. Only deserialize authenticated data. Alternative: Use e.g. JSON
+
+### Optional walls
+
+* [1 FuzzyCoin] Set reasonable timeout for an active session on the server and for the cookie
+  * Cookies have set an expiration time of 7 days for the client. Additionally, we support the expiration data on the server and do not accept cookies older than 7 days.
+* [1 FuzzyCoin] Encrypt cookies which contain sensitive data
+  * The cookie does not contain any sensitive data. However, we sign the cookie to detect any tampering. There, an attacker cannot change the expiration date.
 
 ## Deployment
 
-* We encrypt the database
+### Optional walls
+
+* [1.5 FuzzyCoins] Encrypt your database (so that an attacker, who gets the database files, cannot do anything with it when not having the decryption key)
