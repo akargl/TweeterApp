@@ -1,31 +1,18 @@
 from __future__ import print_function
 import os
 import sys
-from pysqlcipher import dbapi2 as sqlite3
 import random
+from pysqlcipher import dbapi2 as sqlite3
+from loremipsum import get_sentences
 from base64 import b64encode
 from flask import g
 from werkzeug.datastructures import FileStorage
 from app import app
-from loremipsum import get_sentences
+from helpers import get_or_create_key
 
 
 # Based on the flask sqlite tutorial
 # (http://flask.pocoo.org/docs/0.12/patterns/sqlite3/)
-
-def get_or_create_db_key():
-    try:
-        app.logger.debug('Trying to open database key file')
-        with open(app.config['DATABASE_KEY_FILE'], 'r') as f:
-            app.logger.debug('Database key file exists')
-            key = f.read()
-    except IOError:
-        app.logger.debug('Creating new key')
-        key = os.urandom(64)
-        key = b64encode(key)
-        with open(app.config['DATABASE_KEY_FILE'], 'w') as f:
-            f.write(key)
-    return key
 
 
 def get_db():
@@ -33,7 +20,7 @@ def get_db():
     if db is None:
         db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
-        query_db("PRAGMA key='{:s}'".format(get_or_create_db_key()))
+        query_db("PRAGMA key='{:s}'".format(get_or_create_key(app.config['DATABASE_KEY_FILE'])))
         query_db('PRAGMA foreign_keys = ON')
     return db
 

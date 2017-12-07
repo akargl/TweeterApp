@@ -1,10 +1,29 @@
+import os
 import httplib
+from base64 import b64encode
 from functools import wraps
-from flask import g, request, redirect, url_for, abort
-from models import Session, User
-from app import app
+from flask import abort, g, redirect, request, url_for
+from itsdangerous import BadData, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import safe_str_cmp
-from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
+
+
+def get_or_create_key(filename):
+    try:
+        app.logger.debug('Trying to open key file  {:s}'.format(filename))
+        with open(filename, 'r') as f:
+            app.logger.debug('Database key file exists')
+            key = f.read()
+    except IOError:
+        app.logger.debug('No keyfile found. Creating new keyfile {:s}'.format(filename))
+        key = os.urandom(64)
+        key = b64encode(key)
+        with open(filename, 'w') as f:
+            f.write(key)
+    return key
+
+
+from app import app
+from models import Session, User
 
 
 def user_from_credentials():
@@ -86,3 +105,5 @@ def csrf_protection():
     match = safe_str_cmp(form_csrf_token, session_csrf_token)
     if not match:
         return abort(httplib.BAD_REQUEST)
+
+
