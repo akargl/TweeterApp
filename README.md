@@ -105,11 +105,21 @@ The captcha on the register and login pages may not work correctly for Chrome ve
 
 # Security Considerations
 
+This section states the implemented security feautues. We list and comment the [Security Checklist](https://teaching.iaik.tugraz.at/akitsec2/checklist). All striken-through points are not implemented. Else, we considered it and implemented it in our application.
+
 ## XSS
 
-### Optional Walls
+### Optional walls
 
-* CSP violations are reported to our [Sentry](https://sentry.io) instance
+* [1 FuzzyCoin] Set X-XSS-Protection HTTP header.
+* [1 FuzzyCoin] CSP: Disable eval functions.
+* [1 FuzzyCoin] Report CSP violations.
+  * We report CSP violation to a [Sentry](https://sentry.io) instance. Sentry is a plattform to for real-time monitoring of errors. You can access the account on https://sentry.io/auth/login/ with the credentials `Account: robert.schilling@gmx.at` and password `PW: 0RMNsufTzUYwlEWT`. **Please do not change the password!**
+* [0.5 FuzzyCoin] Using a less complex language for user input allows to use a less complex parser, which is less likely to have bugs and makes the input easier to sanitize.
+  * We do not allow special languages such as markdown. Therfore, we avoid any vulnerabilities coming from a complex language parser.
+* [0.5 FuzzyCoin] Limit the amount of Javascript frameworks (because they can enable DOM based XSS).
+  * We only use the external javascript provided by [Bootstrap](https://getbootstrap.com), [jquery](https://jquery.com/), and [popper.js](https://popper.js.org/).
+
 
 ## Session Management
 
