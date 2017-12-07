@@ -1,9 +1,12 @@
 import os
 import httplib
+import json
+import urllib2 as http
 from base64 import b64encode
 from functools import wraps
 from flask import abort, g, redirect, request, url_for
 from itsdangerous import BadData, SignatureExpired, URLSafeTimedSerializer
+from werkzeug import url_encode
 from werkzeug.security import safe_str_cmp
 
 
@@ -107,3 +110,18 @@ def csrf_protection():
         return abort(httplib.BAD_REQUEST)
 
 
+def validate_recaptcha(response, remote_ip):
+    data = url_encode({
+        'secret': app.config.get('RECAPTCHA_SECRET_KEY', ''),
+        'remoteip': remote_ip,
+        'response': response
+    })
+    http_response = http.urlopen('https://www.google.com/recaptcha/api/siteverify', data.encode('utf-8'))
+    if http_response.code != httplib.OK:
+        return False
+
+    json_resp = json.loads(http_response.read().encode('utf-8'))
+    if json_resp["success"]:
+        return True
+
+    return False

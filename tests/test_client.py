@@ -22,6 +22,8 @@ def client():
     app.config['UPLOAD_FOLDER'] = os.path.join(dir_path, tempfile.mkdtemp())
     # Disable CSRF for testing
     app.config['CSRF_METHODS'] = []
+    # No Recaptcha
+    app.config['RECAPTCHA_ENABLED'] = False
     client = app.test_client()
 
     with app.app_context():
@@ -122,12 +124,13 @@ def test_successful_login_case_sensitivity(client):
 
 def test_wrong_username_login(client):
     response = login(client, 'foobar', 'root')
-    assert b'Invalid Login or password.' in response.data
+    print response.data
+    assert b'Invalid Login or password' in response.data
 
 
 def test_wrong_password_login(client):
     response = login(client, 'root', 'bar')
-    assert b'Invalid Login or password.' in response.data
+    assert b'Invalid Login or password' in response.data
 
 
 def test_logout(client):

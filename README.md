@@ -101,6 +101,8 @@ error like following in the browser shell.
 POST https://sentry.io/api/252244/csp-report/?sentry_key=f79b05a88e324c20ba590c4034680917 403 (FORBIDDEN)
 ```
 
+The captcha on the register and login pages may not work correctly for Chrome versions < *v62.0.3202.94* because an experimental CSP policy is used. If you require compliance with older versions the CSP for inline styles may need to be changed to the more permissible and less secure `'unsafe-inline'`.
+
 # Security Considerations
 
 ## XSS
