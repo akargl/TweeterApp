@@ -388,7 +388,10 @@ class FileWrapper:
 
     @staticmethod
     def is_valid_file(attachment):
-        # TODO: Check if file is a symlink
+        if os.path.islink(path):
+            app.logger.debug('Symlink is not a valid file')
+            return ['Malformed image']
+
         file_extension = path.splitext(attachment.filename)[1]
         app.logger.debug("file_extension is" + file_extension)
         if file_extension.lower() in app.config['ALLOWED_EXTENSIONS']:
@@ -397,6 +400,7 @@ class FileWrapper:
             imghdr_type = imghdr.what(None, attachment.read())
             attachment.seek(0)
             if '.' + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
+                app.logger.debug('Invalid file extenion: {:s}'.format(str(imghdr_type)))
                 return ['Malformed image']
         return []
 
@@ -446,7 +450,6 @@ class FileWrapper:
                 'INSERT into FilePermissions (file_id, user_id) VALUES (?, ?)', [
                     file_id, user_id])
             if not status:
-                # TODO: Rollback??
                 return None
 
         f_wrapper = FileWrapper(file_id, f_ext, private)

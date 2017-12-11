@@ -559,12 +559,6 @@ def test_api_valid_file_access(client):
         assert response.status_code == 200
 
 
-def test_api_file_access_symlink(client):
-    # TODO: Remove that, since we check if the file is a symlink when uploading
-    response = client.get('/api/files/symlink', headers=http_basic_headers('root', 'root'))
-    assert response.status_code == 404
-
-
 def test_api_get_users(client):
     response = client.get('/api/users', headers=http_basic_headers('root', 'root'))
 

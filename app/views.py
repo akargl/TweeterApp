@@ -261,7 +261,6 @@ def user(id):
     if request.method == 'PUT':
         is_admin = request.form['is_admin'] == "1"
         status = user.change_role(is_admin)
-        # TODO: if status is None -> error?
     elif request.method == 'DELETE':
         user.delete()
     return ('', httplib.NO_CONTENT)
