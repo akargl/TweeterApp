@@ -32,7 +32,7 @@ def apply_headers(response):
                  "img-src 'self' data:;" \
                  "child-src www.google.com; " \
                  "connect-src 'self'; " \
-                 "report-uri https://sentry.io/api/252244/csp-report/?sentry_key=f79b05a88e324c20ba590c4034680917".format(csp_nonce)
+                 "report-uri {1}".format(csp_nonce, app.config.get('CSP_REPORT_URI', ''))
     response.headers['Content-Security-Policy'] = csp_policy
     return response
 
