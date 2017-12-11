@@ -109,6 +109,21 @@ This section states the implemented security feautues. We list and comment the [
 
 ## XSS
 
+* [1 point] Validate user input, e.g. white listing.
+* [1 point] Sanitize user input.
+  * Escape characters with special meaning before sending them back to the client.
+  * Consider the context of where the user input will be displayed (e.g HTML tag vs URL parameter) and sanitize accordingly.
+* [2 points] Use CSP Headers.
+  * Disable inline scripts (If necessary, allow inline scripts with hashes or nonces).
+  * Whitelist origins (e.g. script sources, style sources, image sources).
+* [1 point] Protect cookies by setting HTTP only flag.
+* [1 point] Make sure that none of the following contexts contain untrusted user data (reason: escaping can be tricky):
+  * script tags : `<script>…[here]…</script>`
+  * html comments : `<!–… [here]… –>`
+  * html attribute names : `<div … [here]=“”>`
+  * html tag names : `<[here] … />`
+  * style tags : `<style>…[here]…</style>`
+
 ### Optional walls
 
 * [1 FuzzyCoin] Set X-XSS-Protection HTTP header.
@@ -120,6 +135,29 @@ This section states the implemented security feautues. We list and comment the [
 * [0.5 FuzzyCoin] Limit the amount of Javascript frameworks (because they can enable DOM based XSS).
   * We only use the external javascript provided by [Bootstrap](https://getbootstrap.com), [jquery](https://jquery.com/), and [popper.js](https://popper.js.org/).
 
+## Authentication
+
+* [1 point] Secure password storage
+  * Adaptive one-way function; e.g. Argon2, PBKDF2, scrypt. Salt the password (nonce, different for each user)
+  * Passwords are hased using PBKDF2. A different salt is used for every user password.
+* [1 point] Enforce reasonable password policy
+  * No empty password, minimum length is 8 characters, only ASCII characters allowed.
+  * Similarity to the username is measuerd. If they are too similar, the password is rejected.
+
+### Optional walls
+
+* [1 FuzzyCoin] Rate limiting with Google RECAPTCHA is implemented
+
+## Authorization
+
+* [2 points] Server-side checking for sufficient privileges on every request; e.g. session identifier, unguessable file links (for less sensitive resources)
+  * Also protect static resources
+* [1 point] Ask for password for sensitive requests
+  * Following actions are protected by additional password requests:
+    * User deletes his own account
+    * Admin deletes another user
+    * Admin promotes another user to an admin
+
 
 ## Session Management
 
@@ -130,6 +168,7 @@ This section states the implemented security feautues. We list and comment the [
   * Secure flag
   * Session cookie is set to `secure` and `HTTPOnly`
 * [1 point] Check your deserialization. Only deserialize authenticated data. Alternative: Use e.g. JSON
+  * We do not put anything inside the session cookie except the date. However, the cookie is signed and therefore, we can trust this value.
 
 ### Optional walls
 
@@ -138,7 +177,19 @@ This section states the implemented security feautues. We list and comment the [
 * [1 FuzzyCoin] Encrypt cookies which contain sensitive data
   * The cookie does not contain any sensitive data. However, we sign the cookie to detect any tampering. There, an attacker cannot change the expiration date.
 
+## XSRF aka CSRF
+
+* [2 points] Include a hidden form field in your form data (when performing requests that make changes on the server); either a “Shared CSRF Token”, or a “Double-submitted Cookie”. A “Shared CSRF Token” is an unpredictable random string/number, unique for every request of the form data, as hidden form field. A “Double-submitted cookie” is the output of a secure one-way function with the cookie value as input, e.g. SHA-512(Cookie), as hidden form field).
+  * All requests that change the state of the server contain a hidden field for the unpredictable CSRF token.
+* [1 point] Reauthentication for sensitive requests (e.g. password, 2nd factor)
+  * We reauthenticate for critical requests like account deletion or user priviledge promotion.
+
 ## Deployment
+
+* [1 point] Trusted third party for images of Docker container; official-tagged images (hub.docker.com) and/or source available (please argue)
+  * We use the official python 2.7 image from hub.docker.com
+* [1 point] Drop privileges of service inside the container (not running as root)
+  * We are running the application under the `tweeter` user and application folder is owned by the `tweetergroup`
 
 ### Optional walls
 
