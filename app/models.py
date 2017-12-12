@@ -193,24 +193,24 @@ class User:
 
 
 class Post:
-    # int id (Primary key)
-    # int author_id -> User.id
-    # str Content
-
     def __init__(self, author_id, content, attachment_name, timestamp):
         self.author_id = author_id
         self.content = content
-        self.attachment_name = attachment_name
+
+        split = path.splitext(attachment_name if attachment_name else '')
+        self.attachment_name = split[0]
+        self.extension = split[1] 
+
         self.timestamp = timestamp
 
     def has_file(self):
-        return self.attachment_name is not None
+        return self.attachment_name is not ''
 
     def is_image(self):
         if not self.attachment_name:
             return False
         file_extension = path.splitext(self.attachment_name)[1]
-        return file_extension.lower() in app.config['ALLOWED_EXTENSIONS']
+        return self.extension.lower() in app.config['IMAGE_EXTENSIONS']
 
     @staticmethod
     def get_posts_by_user_id(user_id):
@@ -253,28 +253,25 @@ class Post:
 
 
 class Message:
-    # int id (Primary key)
-    # int author_id -> User.id
-    # int recipient_id -> User.id
-    # str Content
-    # str filename
-
     def __init__(self, author_id, recipient_id,
                  content, attachment_name, timestamp):
         self.author_id = author_id
         self.recipient_id = recipient_id
         self.content = content
-        self.attachment_name = attachment_name
+
+        split = path.splitext(attachment_name if attachment_name else '')
+        self.attachment_name = split[0]
+        self.extension = split[1] 
+
         self.timestamp = timestamp
 
     def has_file(self):
-        return self.attachment_name is not None
+        return self.attachment_name is not ''
 
     def is_image(self):
         if not self.attachment_name:
             return False
-        file_extension = path.splitext(self.attachment_name)[1]
-        return file_extension.lower() in app.config['ALLOWED_EXTENSIONS']
+        return self.extension.lower() in app.config['IMAGE_EXTENSIONS']
 
     @staticmethod
     def get_messages_for_user_id(user_id):
@@ -285,8 +282,8 @@ class Message:
                 user_id])
         messages = []
         for r in result:
-            messages.append(Message(r['author_id'], r['recipient_id'], r[
-                            'content'], r['filename'], r['timestamp']))
+            messages.append(Message(r['author_id'], r['recipient_id'], 
+                                    r['content'], r['filename'], r['timestamp']))
         return messages
 
     @staticmethod
@@ -303,9 +300,6 @@ class Message:
 
 
 class Session:
-    # int id (Primary key)
-    # str session_token
-    # int user_id -> User.id
     SESSION_KEY = 'spring_session_key'
     CSRF_KEY = 'spring_csrf_token'
     TOKEN_LENGTH = 32
@@ -391,7 +385,7 @@ class FileWrapper:
 
     def serialize(self):
         return {
-            'id': str(self.file_id) + self.extension
+            'id': str(self.file_id)
         }
 
     @staticmethod
@@ -402,12 +396,12 @@ class FileWrapper:
 
         file_extension = path.splitext(attachment.filename)[1]
         app.logger.debug("file_extension is" + file_extension)
-        if file_extension.lower() in app.config['ALLOWED_EXTENSIONS']:
+        if file_extension.lower() in app.config['IMAGE_EXTENSIONS']:
             # If we have an image extension, check if it is really in image
             attachment.seek(0)
             imghdr_type = imghdr.what(None, attachment.read())
             attachment.seek(0)
-            if '.' + str(imghdr_type) not in app.config['ALLOWED_EXTENSIONS']:
+            if '.' + str(imghdr_type) not in app.config['IMAGE_EXTENSIONS']:
                 app.logger.debug('Invalid file extenion: {:s}'.format(str(imghdr_type)))
                 return ['Malformed image']
         return []
@@ -439,6 +433,21 @@ class FileWrapper:
 
         f_wrapper = FileWrapper(file_data['id'], file_data[
                                 'extension'], file_data['private'])
+        return f_wrapper
+
+    @staticmethod
+    def get_by_id(file_id, user_id):
+        file_data = query_db(
+            'SELECT * from Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (id = ? and (permission.user_id = ? or file.private=0))',
+            [
+                file_id,
+                user_id],
+            one=True)
+        if not file_data:
+            return None
+
+        f_wrapper = FileWrapper(file_data['id'], file_data['extension'], 
+                                file_data['private'])
         return f_wrapper
 
     @staticmethod

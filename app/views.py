@@ -284,10 +284,10 @@ def api_files():
     return jsonify([f.serialize() for f in files])
 
 
-@app.route("/api/files/<path:filename>")
+@app.route("/api/files/<int:fileid>")
 @authentication_required(redirect_to_login=False)
-def api_get_file(filename):
-    f_wrapper = FileWrapper.get_by_filename(filename, g.user.id)
+def api_get_file(fileid):
+    f_wrapper = FileWrapper.get_by_id(fileid, g.user.id)
     if f_wrapper is None:
         return abort(httplib.NOT_FOUND)
     storage_path = f_wrapper.get_storagepath()
@@ -300,7 +300,8 @@ def api_get_file(filename):
             "Requested file {:s} is a symlink".format(storage_path))
         abort(httplib.FORBIDDEN)
 
-    return send_file(storage_path)
+    return send_file(storage_path, as_attachment=True, 
+                     attachment_filename=f_wrapper.get_filename())
 
 
 @app.route("/api/users")

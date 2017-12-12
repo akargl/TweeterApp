@@ -197,8 +197,9 @@ def insert_db(query, args=()):
 
 @app.before_first_request
 def clear_sessions():
-    from models import Session
-    Session.clear()
+    if not app.config.get('DEBUG', True):
+        from models import Session
+        Session.clear()
 
 
 @app.teardown_appcontext

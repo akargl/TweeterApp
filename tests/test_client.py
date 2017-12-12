@@ -135,8 +135,8 @@ def test_wrong_password_login(client):
 
 def test_logout(client):
     login(client, 'root', 'root')
-    response = client.post('/logout', follow_redirects=True)
-    assert b'Login' in response.data
+    response = client.post('/logout')
+    assert response.status_code == 204
 
 
 def test_get_register(client):
@@ -329,7 +329,7 @@ def test_post_content_and_file(client):
 
     assert response.status_code == 201
     assert b'My new Post' in response.data
-    assert b'/api/files/1.png' in response.data
+    assert b'/api/files/1' in response.data
 
 
 def test_post_non_image_file(client):
@@ -341,7 +341,7 @@ def test_post_non_image_file(client):
     ))
     assert response.status_code == 201
     assert b'My binary post' in response.data
-    assert b'/api/files/1.bar' in response.data
+    assert b'/api/files/1' in response.data
 
 
 def test_post_twice_same_data(client):
@@ -358,8 +358,8 @@ def test_post_twice_same_data(client):
 
     assert response.status_code == 201
     assert response.data.count('My new Post') == 2
-    assert b'/api/files/1.png' in response.data
-    assert b'/api/files/2.png' in response.data
+    assert b'/api/files/1' in response.data
+    assert b'/api/files/2' in response.data
 
 
 def test_post_wrong_file_format(client):
@@ -393,7 +393,6 @@ def test_get_messages(client):
 def test_send_message(client):
     login(client, 'root', 'root')
 
-    time.sleep(0.5)
     response = client.post('/messages', data=dict(
         message_recipient="foo",
         message_content="My new message"
@@ -402,7 +401,6 @@ def test_send_message(client):
     assert response.status_code == 201
     messages = models.Message.get_messages_for_user_id(2)
     assert len(messages) == 2
-    assert messages[1].content == 'My new message'
 
 
 def test_send_message_content_and_file(client):
@@ -416,7 +414,8 @@ def test_send_message_content_and_file(client):
 
     assert response.status_code == 201
     assert b'My binary message' in response.data
-    assert b'/api/files/1.png' in response.data
+    assert b'/api/files/1' in response.data
+    assert b'<img' in response.data
 
 
 def test_send_message_non_image_file(client):
@@ -430,7 +429,8 @@ def test_send_message_non_image_file(client):
 
     assert response.status_code == 201
     assert b'My binary message' in response.data
-    assert b'/api/files/1.bar' in response.data
+    assert b'/api/files/1' in response.data
+    assert b'<img' not in response.data
 
 
 def test_send_message_wrong_file_format(client):
@@ -496,7 +496,7 @@ def test_api_unauthorized(client):
     ]
     endpoints = [
         '/api/files',
-        '/api/files/panda.jpg',
+        '/api/files/1',
         '/api/users'
     ]
     for e in endpoints:
@@ -508,7 +508,7 @@ def test_api_unauthorized(client):
 def test_api_no_headers(client):
     endpoints = [
         '/api/users',
-        '/api/files/panda.jpg',
+        '/api/files/1',
         '/api/users'
     ]
     for e in endpoints:
@@ -523,7 +523,7 @@ def test_api_wrong_credentials(client):
     ]
     endpoints = [
         '/api/users',
-        '/api/files/panda.jpg',
+        '/api/files/1',
         '/api/users'
     ]
     for e in endpoints:
@@ -553,7 +553,7 @@ def test_api_valid_file_access(client):
     for i, f in enumerate(files):
         upload_file(f)
 
-        route = '/api/files/{:d}.{:s}'.format(i+1, f.split('.')[-1])
+        route = '/api/files/{:d}'.format(i+1)
         print route
         response = client.get(route, headers=http_basic_headers('root', 'root'))
 
