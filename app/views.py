@@ -4,9 +4,16 @@ import datetime
 from base64 import b64encode
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
 from app import app
-from helpers import authentication_required, validate_recaptcha
+from helpers import authentication_required, validate_recaptcha, unautenticated_csrf_protection
 from models import Session, User, Post, Message, FileWrapper
 from templates import TemplateManager
+
+
+def set_cookie(response, key, value, timeout):
+    expire_date = datetime.datetime.now()
+    expire_date = expire_date + \
+        datetime.timedelta(seconds=timeout)
+    response.set_cookie(key, value, httponly=True, expires=expire_date, secure=True)
 
 
 @app.before_request
@@ -17,6 +24,10 @@ def csp_generate_nonce():
 
 @app.after_request
 def apply_headers(response):
+    csrf_cookie = g.get('csrf_cookie')
+    if csrf_cookie:
+        set_cookie(response, Session.CSRF_KEY, csrf_cookie, app.config['MAX_CSRF_TOKEN_AGE'])
+
     # Enable XSS protection for Google Chrome and Internet Explorer
     response.headers["X-XSS-Protection"] = '1; mode=block'
     # Disallow embedding of the site into other pages via <frame>,...
@@ -78,6 +89,7 @@ def index():
 
 
 @app.route("/login", methods=['GET', 'POST'])
+@unautenticated_csrf_protection
 def login():
     # Post: params[username, password]
     if request.method == 'GET':
@@ -120,11 +132,7 @@ def login():
         url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
 
-        expire_date = datetime.datetime.now()
-        expire_date = expire_date + \
-            datetime.timedelta(days=app.config['MAX_SESSION_AGE_DAYS'])
-        response.set_cookie(Session.SESSION_KEY, session_token, httponly=True,
-                            expires=expire_date, secure=True)
+        set_cookie(response, Session.SESSION_KEY, session_token, app.config['MAX_SESSION_AGE'])
         return response
 
 
@@ -136,6 +144,7 @@ def logout():
 
 
 @app.route("/register", methods=['GET', 'POST'])
+@unautenticated_csrf_protection
 def register():
     # Post: params[username, password]
     user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))

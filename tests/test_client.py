@@ -393,6 +393,7 @@ def test_get_messages(client):
 def test_send_message(client):
     login(client, 'root', 'root')
 
+    time.sleep(0.5)
     response = client.post('/messages', data=dict(
         message_recipient="foo",
         message_content="My new message"
@@ -641,15 +642,11 @@ def test_delete_user_admin(client):
 
 
 def test_session_expiry(client):
+    app.config['MAX_SESSION_AGE'] = 3
+
     login(client, 'root', 'root')
-    response = login(client, 'root', 'root')
-    assert response.status_code == 200
-    assert b'Logged in as root' in response.data
+
+    time.sleep(4)
     response = client.post('/', follow_redirects=True)
-    assert b'Login' not in response.data
-    originalSessionAge = app.config['MAX_SESSION_AGE']
-    app.config['MAX_SESSION_AGE'] = 10
-    time.sleep(12)
-    response = client.post('/', follow_redirects=True)
+
     assert b'Login' in response.data
-    app.config['MAX_SESSION_AGE'] = originalSessionAge
