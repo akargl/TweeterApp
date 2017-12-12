@@ -421,21 +421,6 @@ class FileWrapper:
         return files
 
     @staticmethod
-    def get_by_filename(filename, user_id):
-        file_data = query_db(
-            'SELECT * from Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (id || extension = ? and (permission.user_id = ? or file.private=0))',
-            [
-                filename,
-                user_id],
-            one=True)
-        if not file_data:
-            return None
-
-        f_wrapper = FileWrapper(file_data['id'], file_data[
-                                'extension'], file_data['private'])
-        return f_wrapper
-
-    @staticmethod
     def get_by_id(file_id, user_id):
         file_data = query_db(
             'SELECT * from Files file INNER JOIN FilePermissions permission ON file.id = permission.file_id WHERE (id = ? and (permission.user_id = ? or file.private=0))',

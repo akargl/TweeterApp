@@ -1,4 +1,4 @@
-DEBUG = True
+DEBUG = False
 DATABASE = 'database.db'
 DATABASE_KEY_FILE = 'database.key'
 UPLOAD_FOLDER = 'uploads'
