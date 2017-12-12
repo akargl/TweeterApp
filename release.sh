@@ -7,3 +7,5 @@ cp Dockerfile $RELEASE_FOLDER
 cp docker-compose.yml $RELEASE_FOLDER
 cp *.py $RELEASE_FOLDER
 cp -r app $RELEASE_FOLDER
+mkdir -p $RELEASE_FOLDER/tests/test_data
+cp tests/test_data/* $RELEASE_FOLDER/tests/test_data

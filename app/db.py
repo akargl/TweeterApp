@@ -43,7 +43,7 @@ def init_db():
 
         for item in files:
             if any(item.lower().endswith(ext)
-                   for ext in app.config['ALLOWED_EXTENSIONS']):
+                   for ext in app.config['IMAGE_EXTENSIONS']):
                 os.remove(os.path.join(dir_name, item))
     except OSError:
         pass
