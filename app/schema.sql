@@ -41,7 +41,6 @@ CREATE TABLE `FilePermissions` (
 CREATE TABLE `PasswordRecoveryTokens` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`user_id` REFERENCES Users(id) ON DELETE CASCADE,
-	`token`	TEXT NOT NULL,
-	`timestamp`	INTEGER
+	`token`	TEXT NOT NULL
 );
 COMMIT;

@@ -107,7 +107,6 @@ class TemplateManager(object):
     def get_login_template(errors=[]):
         alerts = TemplateManager.render_errors(errors)
         alerts += TemplateManager.render_messages(get_flashed_messages())
-        app.logger.debug(alerts)
 
         recaptcha_template = TemplateManager.get_recaptcha_template()
         login_template = TemplateManager.get_template(
@@ -121,7 +120,6 @@ class TemplateManager(object):
         main_template = TemplateManager.get_template(
             "simple-main-template", {"main_title": "Login", "main_content": main_content})
 
-        app.logger.debug(main_template)
         return main_template
 
     @staticmethod

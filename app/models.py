@@ -390,8 +390,8 @@ class Session:
             "Create new session for user {:s}".format(user.username))
         session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
-        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
         session_token = signer.dumps(session_token)
         csrf_token = Session.create_csrf_token()
 
@@ -508,23 +508,34 @@ class FileWrapper:
 
 
 class PasswordRecoveryTokens:
-    EXPIRY_HOUR = 1
-
-    def __init__(self, id, token, user, timestamp):
+    def __init__(self, id, token, user):
         self.id = id
         self.token = token
         self.user = user
-        self.timestamp = datetime.fromtimestamp(timestamp)
-
-    def has_expired(self):
-        return self.timestamp < datetime.datetime.today() - datetime.timedelta(hours=self.EXPIRY_HOUR)
 
     def delete(self):
-        return insert_db('DELETE FROM PasswordRecoveryTokens WHERE id = ?', [self.id])
+        return insert_db('DELETE FROM PasswordRecoveryTokens WHERE user_id = ?', [self.user.id])
+
+    @staticmethod
+    def has_expired(token):
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        try:
+            signer.loads(token, max_age=app.config['PASSWORD_RECOVERY_EXPIRATION_TIMEOUT'])
+        except SignatureExpired:
+            app.logger.debug('Password recovery token expired.')
+            return ['Password recovery token expired.']
+        except BadData:
+            app.logger.debug('Password recovery token invalid.')
+            return ['Password recovery token invalid.']
+        return []
 
     @staticmethod
     def clear():
         return insert_db('DELETE FROM PasswordRecoveryTokens')
+
+    @staticmethod
+    def delete_token(token):
+        return insert_db('DELETE FROM PasswordRecoveryTokens where token = ?', [token])
 
     @staticmethod
     def hash_token(token):
@@ -537,11 +548,13 @@ class PasswordRecoveryTokens:
     def create(user):
         token = os.urandom(32)
         token = b64encode(token, '-_')
-        hashed_token = PasswordRecoveryTokens.hash_token(token)
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        signed_token = signer.dumps(token)
+        hashed_token = PasswordRecoveryTokens.hash_token(signed_token)
 
-        status = insert_db('INSERT into PasswordRecoveryTokens (user_id, token, timestamp) VALUES (?, ?, ?)', [user.id, hashed_token, int(time.time())])
+        status = insert_db('INSERT into PasswordRecoveryTokens (user_id, token) VALUES (?, ?)', [user.id, hashed_token])
         if status:
-            return token
+            return signed_token
         else:
             return None
 
@@ -549,15 +562,21 @@ class PasswordRecoveryTokens:
     def get_token(token):
         hashed_token = PasswordRecoveryTokens.hash_token(token)
 
-        # TODO: Check if token is valid based on the time
         resp = query_db('SELECT * from PasswordRecoveryTokens WHERE token = ?', [hashed_token], one=True)
         if not resp:
             app.logger.debug('Could not find the token')
-            return None
+            return ['Invalid password recovery token.'], None
 
         user = User.get_user_by_id(resp['user_id'])
         if not user:
             app.logger.debug('Could not find the user')
-            return None
-        return PasswordRecoveryTokens(resp['id'], token, user, resp['timestamp'])
+            PasswordRecoveryTokens.delete_token(hashed_token)
+            return ['Invalid user for password recovery.'], None
+
+        errors = PasswordRecoveryTokens.has_expired(token)
+        if len(errors):
+            PasswordRecoveryTokens.delete_token(hashed_token)
+            return errors, None
+
+        return [], PasswordRecoveryTokens(resp['id'], token, user)
 

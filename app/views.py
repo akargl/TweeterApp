@@ -153,7 +153,7 @@ def reset_password():
         if user:
             token = PasswordRecoveryTokens.create(user)
             if not token:
-                return
+                return TemplateManager.get_reset_password_template(['Could not reset password. Please try again.'])
 
             # Send a password recovery token via email
             msg = flask_mail.Message("Tweeter - Password Recovery",
@@ -169,29 +169,28 @@ def reset_password():
 @app.route("/update_password/<token>", methods=['GET', 'POST'])
 @unautenticated_csrf_protection
 def update_password(token):
-    app.logger.debug('my token is ' + token)
     # If the user is already logged in, just display the index
     if already_logged_in(request):
         return redirect(url_for('index'))
 
-    token = PasswordRecoveryTokens.get_token(token)
-    if not token:
-        app.logger.debug('Invalid recovery token')
-        flash('Invalid recovery token')
+    errors, reset_token = PasswordRecoveryTokens.get_token(token)
+    if len(errors):
+        app.logger.debug('Invalid password recovery token.')
+        [flash(e) for e in errors]
         return redirect(url_for('login'))
 
     if request.method == 'GET':
-        return TemplateManager.get_update_password_template(token.token)
+        return TemplateManager.get_update_password_template(reset_token.token)
     elif request.method == 'POST':
         password = request.form['password']
-        errors = token.user.update_password(password)
+        errors = reset_token.user.update_password(password)
 
         if len(errors):
             [app.logger.debug(e) for e in errors]
-            return TemplateManager.get_update_password_template(token.token, errors)
+            return TemplateManager.get_update_password_template(reset_token.token, errors)
 
         # Delete the used token
-        token.delete()
+        reset_token.delete()
         flash('Passwort has been changed. Please login with your new password.')
         return redirect(url_for('login'))
 
@@ -239,6 +238,7 @@ def register():
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)
 
+        flash('Succesfully created user. Please login!')
         return redirect(url_for('login'), code=httplib.SEE_OTHER)
 
 

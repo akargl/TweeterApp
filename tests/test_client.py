@@ -69,6 +69,11 @@ def http_basic_headers(username, password):
     return { 'Authorization' : 'Basic ' + b64encode("{:s}:{:s}".format(username, password)) }
 
 
+def password_reset_link(email_body):
+    url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', email_body)[0]
+    return urlparse(url).path
+
+
 def test_database_cascading(client):
     db.create_user('foobar', 'foobar', 'foobar@foobar.com', False)
     u = models.User.get_user_by_name('foobar')
@@ -682,7 +687,6 @@ def test_session_expiry(client):
     response = client.post('/', follow_redirects=True)
 
     assert b'Login' in response.data
-    app.config['MAX_SESSION_AGE'] = originalSessionAge
 
 
 def test_reset_password_redirect_to_index_if_login(client):
@@ -721,10 +725,9 @@ def test_reset_password_deliver_mail(client):
         resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
 
         assert len(outbox) == 1
-        url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', outbox[0].html)[0]
-        path = urlparse(url).path
+        reset_link = password_reset_link(outbox[0].html)
 
-        resp = client.get(path)
+        resp = client.get(reset_link)
         assert resp.status_code == 200
         assert b'Update password' in resp.data
 
@@ -737,13 +740,30 @@ def test_reset_password_deliver_mail(client):
         assert b'Logged in as root' in resp.data
 
 
-def test_update_password_wrong_token(clieunt):
-    response = client.post('/update_password/foobar')
-
-    assert response.status_code == 404
-
-
 def test_update_password_wrong_token(client):
+    response = client.post('/update_password/foobar', follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'Invalid password recovery token.' in response.data
+
+
+def test_update_password_expired(client):
+    app.config['PASSWORD_RECOVERY_EXPIRATION_TIMEOUT'] = 5
+
+    with mail.record_messages() as outbox:
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+
+        assert len(outbox) == 1
+        reset_link = password_reset_link(outbox[0].html)
+
+        time.sleep(6)
+
+        resp = client.post(reset_link, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
+        assert resp.status_code == 200
+        assert b'Password recovery token expired.' in resp.data
+
+
+def test_update_password_logged_in(client):
     login(client, 'root', 'root')
 
     response = client.post('/update_password/foobar', follow_redirects=True)
