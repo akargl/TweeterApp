@@ -731,7 +731,7 @@ def test_reset_password_deliver_mail(client):
         assert resp.status_code == 200
         assert b'Update password' in resp.data
 
-        resp = client.post(path, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
+        resp = client.post(reset_link, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
         assert resp.status_code == 200
         assert b'Passwort has been changed. Please login with your new password.' in resp.data
 

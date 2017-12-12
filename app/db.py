@@ -92,8 +92,6 @@ def create_entry(permitted_user_ids, private):
     #   * text and image
     from models import FileWrapper, MAX_CONTENT_LENGTH
 
-    print(permitted_user_ids, private)
-
     def shorten(data):
         return (data[:MAX_CONTENT_LENGTH] +
                 '..') if len(data) > MAX_CONTENT_LENGTH else data
@@ -146,7 +144,6 @@ def seed_db():
             users.append(user)
             print_dot()
         else:
-            print(u)
             print('Failed to create user')
 
     print('\nCreating public posts')
@@ -162,8 +159,6 @@ def seed_db():
         random.shuffle(users)
         author = users[0]
         recipient = users[1]
-
-        print([author.id, recipient.id])
 
         sentence, filename = create_entry([author.id, recipient.id], True)
         Message.create(author.id, recipient.id, sentence, filename)
@@ -210,8 +205,6 @@ def insert_db(query, args=()):
             return rowcount
         return last_id
     except sqlite3.Error as e:
-        import traceback
-        traceback.print_exc()
         app.logger.debug('sqlite3 error ' + e.message)
         return None
 
@@ -219,7 +212,7 @@ def insert_db(query, args=()):
 @app.before_first_request
 def clear_sessions():
     if not app.config.get('DEBUG', True):
-        from models import Session
+        from models import Session, PasswordRecoveryTokens
         Session.clear()
         PasswordRecoveryTokens.clear()
 

@@ -3,26 +3,20 @@ import re
 import hashlib
 import time
 import imghdr
-from datetime import datetime
-from hmac import compare_digest
 from base64 import b64encode
+from difflib import SequenceMatcher
+from os import path
 from werkzeug.utils import secure_filename
 from werkzeug.security import safe_str_cmp, DEFAULT_PBKDF2_ITERATIONS
 from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 from db import query_db, insert_db
 from app import app
-from os import path
-from difflib import SequenceMatcher
 
 
 MAX_CONTENT_LENGTH = 4 * 140
 
 
 class User:
-    # int id (Primary key)
-    # str username
-    # str password_token
-    # bool is_admin
     MAX_USERNAME_LEN = 256
     MIN_PASSWORD_LEN = 8
     MAX_PASSWORD_LEN = 256
@@ -53,8 +47,6 @@ class User:
 
         result = insert_db('UPDATE Users SET password_salt = ?, password_token = ? WHERE id = ?', [
                            salt, hashed_pw, self.id])
-        app.logger.debug(result is None)
-        # TODO: Update sessions?
         if result is None:
             return ['Could not reset password']
         return []
