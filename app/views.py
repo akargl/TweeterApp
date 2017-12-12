@@ -132,7 +132,8 @@ def login():
 @authentication_required()
 def logout():
     Session.delete(g.user.id, g.session_token)
-    return redirect(url_for('login'))
+
+    return ("", httplib.NO_CONTENT)
 
 
 @app.route("/register", methods=['GET', 'POST'])

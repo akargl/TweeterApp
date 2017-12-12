@@ -96,7 +96,7 @@ function administrationDeletionClickHandler(userId) {
 function logoutClickHandler() {
     return requestLogout()
         .then(() => {
-            document.location.reload();
+            document.location = "/login";
         });
 }
 
