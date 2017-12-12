@@ -47,7 +47,10 @@ class TemplateManager(object):
 
         recaptcha_template = TemplateManager.get_recaptcha_template()
         register_template = TemplateManager.get_template(
-            "register-template", {"form_target": url_for('register'), "recaptcha": recaptcha_template})
+            "register-template", {
+                "form_target": url_for('register'),
+                "recaptcha": recaptcha_template,
+                "csrf_token": g.get('csrf_cookie', '')})
 
         alerts = "\n".join(TemplateManager.get_template(
             "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
@@ -100,7 +103,10 @@ class TemplateManager(object):
 
         recaptcha_template = TemplateManager.get_recaptcha_template()
         login_template = TemplateManager.get_template(
-            "login-template", {"form_target": url_for('login'), "recaptcha": recaptcha_template})
+            "login-template", {
+                "form_target": url_for('login'),
+                "recaptcha": recaptcha_template,
+                "csrf_token": g.get('csrf_cookie', '')})
 
         alerts = "\n".join(TemplateManager.get_template(
             "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
@@ -131,14 +137,11 @@ class TemplateManager(object):
         max_attachment_size = str(
             app.config['MAX_CONTENT_LENGTH'] / 1024 / 1024) + "MB"
         post_form = TemplateManager.get_template(
-            "post-form-template",
-            {
+            "post-form-template",  {
                 "username": escaped_username,
                 "form_target": url_for('index'),
                 "max_attachment_size": max_attachment_size,
-                'csrf_token': g.get(
-                    'csrf_token',
-                    '')})
+                'csrf_token': g.get('csrf_token', '')})
 
         posts_content = ""
         for p in posts:
@@ -479,6 +482,7 @@ class TemplateManager(object):
                  """
 <h4>You need to log in or <a href="register">create a new account</a></h4>
 <form action="${form_target}" method="POST">
+    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
     <div class="form-group">
         <label for="username">Username</label>
         <input type="text" class="form-control" id="username" name="username" placeholder="">
@@ -496,10 +500,11 @@ class TemplateManager(object):
                  """
 <h1>Create account</h1>
 <form action="${form_target}" method="POST">
+    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
     <div class="form-group">
         <label for="username">Username</label>
         <input type="text" class="form-control" id="username" name="username" aria-describedby="usernameHelp" placeholder="">
-        <small id="usernameHelp" class="form-text text-muted">Max 265 characters</small>
+        <small id="usernameHelp" class="form-text text-muted">Max 256 characters</small>
     </div>
     <div class="form-group">
         <label for="password">Password</label>

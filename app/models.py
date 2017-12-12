@@ -307,6 +307,7 @@ class Session:
     # str session_token
     # int user_id -> User.id
     SESSION_KEY = 'spring_session_key'
+    CSRF_KEY = 'spring_csrf_token'
     TOKEN_LENGTH = 32
 
     @staticmethod
@@ -338,17 +339,23 @@ class Session:
         return User.get_user_by_id(data['user_id']), data['csrf_token']
 
     @staticmethod
+    def create_csrf_token():
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        csrf_token = os.urandom(Session.TOKEN_LENGTH)
+        csrf_token = b64encode(csrf_token).decode('utf-8')
+        csrf_token = signer.dumps(csrf_token)
+        return csrf_token
+
+    @staticmethod
     def new_session(user):
         app.logger.debug(
             "Create new session for user {:s}".format(user.username))
         session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
         signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-        session_token = signer.dumps(session_token)
 
-        csrf_token = os.urandom(Session.TOKEN_LENGTH)
-        csrf_token = b64encode(session_token).decode('utf-8')
-        csrf_token = signer.dumps(csrf_token)
+        session_token = signer.dumps(session_token)
+        csrf_token = Session.create_csrf_token()
 
         result = insert_db(
             'INSERT INTO Sessions (session_token, user_id, csrf_token) Values (?, ?, ?)', [
@@ -389,7 +396,7 @@ class FileWrapper:
 
     @staticmethod
     def is_valid_file(attachment):
-        if os.path.islink(path):
+        if os.path.islink(attachment.filename):
             app.logger.debug('Symlink is not a valid file')
             return ['Malformed image']
 
