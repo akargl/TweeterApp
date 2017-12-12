@@ -90,11 +90,11 @@ def csrf_protection():
     # Get the CSRF token
     form_csrf_token = request.form.get('csrf-token')
     if not form_csrf_token:
-        return abort(httplib.BAD_REQUEST)
+        abort(httplib.UNPROCESSABLE_ENTITY)
 
     session_csrf_token = g.get('csrf_token')
     if not session_csrf_token:
-        return abort(httplib.BAD_REQUEST)
+        abort(httplib.UNPROCESSABLE_ENTITY)
 
     signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
     try:
@@ -103,11 +103,11 @@ def csrf_protection():
         from views import logout
         return logout()
     except BadData:
-        abort(httplib.BAD_REQUEST)
+        abort(httplib.UNPROCESSABLE_ENTITY)
 
     match = safe_str_cmp(form_csrf_token, session_csrf_token)
     if not match:
-        return abort(httplib.BAD_REQUEST)
+        abort(httplib.UNPROCESSABLE_ENTITY)
 
 
 def unautenticated_csrf_protection(func):
@@ -121,28 +121,28 @@ def unautenticated_csrf_protection(func):
         form_csrf_token = request.form.get('csrf-token')
         if not form_csrf_token:
             app.logger.debug('No form token')
-            abort(httplib.BAD_REQUEST)
+            abort(httplib.UNPROCESSABLE_ENTITY)
 
         # Second CSRF token from the cookie
         cookie_csrf_token = request.cookies.get(Session.CSRF_KEY)
         if not cookie_csrf_token:
             app.logger.debug('No cookie')
-            abort(httplib.BAD_REQUEST)
+            abort(httplib.UNPROCESSABLE_ENTITY)
 
         signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
         try:
             signer.loads(form_csrf_token, max_age=app.config['MAX_CSRF_TOKEN_AGE'])
         except SignatureExpired:
             app.logger.debug('Signature invalid')
-            abort(abort(httplib.BAD_REQUEST))
+            abort(abort(httplib.UNPROCESSABLE_ENTITY))
         except BadData:
             app.logger.debug('bad data')
-            abort(abort(httplib.BAD_REQUEST))
+            abort(abort(httplib.UNPROCESSABLE_ENTITY))
 
         match = safe_str_cmp(form_csrf_token, cookie_csrf_token)
         if not match:
             app.logger.debug('No fmatch')
-            abort(httplib.BAD_REQUEST)
+            abort(httplib.UNPROCESSABLE_ENTITY)
         return func(*args, **kwds)
     return wrapper
 
