@@ -113,8 +113,8 @@ def csrf_protection():
 def unautenticated_csrf_protection(func):
     @wraps(func)
     def wrapper(*args, **kwds):
+        g.csrf_cookie = Session.create_csrf_token()
         if request.method not in app.config['CSRF_METHODS']:
-            g.csrf_cookie = Session.create_csrf_token()
             return func(*args, **kwds)
 
         # First CSRF token from the form
