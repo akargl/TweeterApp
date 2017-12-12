@@ -6,6 +6,7 @@ import imghdr
 from hmac import compare_digest
 from base64 import b64encode
 from werkzeug.utils import secure_filename
+from werkzeug.security import safe_str_cmp, DEFAULT_PBKDF2_ITERATIONS
 from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 from db import query_db, insert_db
 from app import app
@@ -27,7 +28,7 @@ class User:
 
     SALT_LENGTH = 32
     HASH_ALGO = 'sha256'
-    HASH_ITERATIONS = 10000
+    HASH_ITERATIONS = 50000
 
     def __init__(self, id, username, is_admin):
         self.id = id
@@ -98,7 +99,7 @@ class User:
 
     @staticmethod
     def password_compare(a, b):
-        return compare_digest(a.decode('utf-8'), b.decode('utf-8'))
+        return safe_str_cmp(a.decode('utf-8'), b.decode('utf-8'))
 
     @staticmethod
     def check_password(username, password):
