@@ -107,7 +107,9 @@ class TemplateManager(object):
     def get_login_template(errors=[]):
         alerts = TemplateManager.render_errors(errors)
         alerts += TemplateManager.render_messages(get_flashed_messages())
+        app.logger.debug(alerts)
 
+        recaptcha_template = TemplateManager.get_recaptcha_template()
         login_template = TemplateManager.get_template(
             "login-template", {
                 "form_target": url_for('login'),
@@ -119,6 +121,7 @@ class TemplateManager(object):
         main_template = TemplateManager.get_template(
             "simple-main-template", {"main_title": "Login", "main_content": main_content})
 
+        app.logger.debug(main_template)
         return main_template
 
     @staticmethod
@@ -126,7 +129,9 @@ class TemplateManager(object):
         alerts = TemplateManager.render_errors(errors)
 
         recover_template = TemplateManager.get_template(
-            "reset-password-template", {"form_target": url_for('reset_password')})
+            "reset-password-template", {
+                "form_target": url_for('reset_password'),
+                "csrf_token": g.get('csrf_cookie', '')})
 
         main_content = alerts + recover_template
 
@@ -140,7 +145,9 @@ class TemplateManager(object):
         alerts = TemplateManager.render_errors(errors)
 
         update_password_template = TemplateManager.get_template(
-            "update-password-template", {"form_target": url_for('update_password', token=token)})
+            "update-password-template", {
+                "form_target": url_for('update_password', token=token),
+                "csrf_token": g.get('csrf_cookie', '')})
 
         main_content = alerts + update_password_template
 
@@ -519,17 +526,19 @@ class TemplateManager(object):
                  """
 <h4>Reset password</a></h4>
 <form action="${form_target}" method="POST">
+    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
     <div class="form-group">
         <label for="email">Email</label>
         <input type="text" class="form-control" id="email" name="email" placeholder="">
     </div>
-      <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-primary">Submit</button>
 </form>
     """,
                 "update-password-template":
                  """
 <h4>Update password</a></h4>
 <form action="${form_target}" method="POST">
+    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
     <div class="form-group">
         <label for="password">Password</label>
         <input type="password" class="form-control" id="password" name="password" aria-describedby="passwordHelp" placeholder="">

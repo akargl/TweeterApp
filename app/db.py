@@ -25,7 +25,7 @@ def get_db():
         db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
         if app.config.get('DATABASE_ENCRYPT', True):
-            query_db("PRAGMA key='{:s}'".format(get_or_create_db_key()))
+            query_db("PRAGMA key='{:s}'".format(get_or_create_key(app.config['DATABASE_KEY_FILE'])))
         query_db('PRAGMA foreign_keys = ON')
     return db
 
@@ -198,8 +198,6 @@ def query_db(query, args=(), one=False):
 
 def insert_db(query, args=()):
     try:
-        app.logger.debug('Query: ' + query)
-        app.logger.debug(args)
         cur = get_db().execute(query, args)
         get_db().commit()
         rowcount = cur.rowcount

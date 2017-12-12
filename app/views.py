@@ -134,6 +134,7 @@ def login():
 
 
 @app.route("/reset_password", methods=['GET', 'POST'])
+@unautenticated_csrf_protection
 def reset_password():
     # If the user is already logged in, just display the index
     if already_logged_in(request):
@@ -166,6 +167,7 @@ def reset_password():
 
 
 @app.route("/update_password/<token>", methods=['GET', 'POST'])
+@unautenticated_csrf_protection
 def update_password(token):
     app.logger.debug('my token is ' + token)
     # If the user is already logged in, just display the index
@@ -198,7 +200,7 @@ def update_password(token):
 @authentication_required()
 def logout():
     Session.delete(g.user.id, g.session_token)
-
+    flash('Successfully logged out.')
     return ("", httplib.NO_CONTENT)
 
 
@@ -254,6 +256,7 @@ def deregister():
 
         g.user.delete()
         g.user = None
+        flash('Successfully deleted the account.')
         return redirect(url_for('login'))
 
 
