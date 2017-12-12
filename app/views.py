@@ -33,6 +33,8 @@ def apply_headers(response):
     # Disallow embedding of the site into other pages via <frame>,...
     response.headers["X-Frame-Options"] = 'SAMEORIGIN'
     response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Download-Options'] = 'noopen'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     # No downgrade attacks. Everything HTTPS
     response.headers['Strict-Transport-Security'] = 'max-age=31536000'
     csp_nonce = g.get('csp_nonce', '')
