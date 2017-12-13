@@ -725,6 +725,7 @@ def test_reset_password_deliver_mail(client):
         resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
 
         assert len(outbox) == 1
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 1
         reset_link = password_reset_link(outbox[0].html)
 
         resp = client.get(reset_link)
@@ -734,10 +735,22 @@ def test_reset_password_deliver_mail(client):
         resp = client.post(reset_link, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
         assert resp.status_code == 200
         assert b'Passwort has been changed. Please login with your new password.' in resp.data
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 0
 
         resp = login(client, 'root', 'mychangedpassword')
         assert resp.status_code == 200
         assert b'Logged in as root' in resp.data
+
+
+def test_reset_password_clears_pending_request_tokens(client):
+    with mail.record_messages() as outbox:
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+
+        assert len(outbox) == 2
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 2
+        reset_link = password_reset_link(outbox[1].html)
+
 
 
 def test_update_password_wrong_token(client):

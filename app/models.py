@@ -526,6 +526,10 @@ class PasswordRecoveryTokens:
         return insert_db('DELETE FROM PasswordRecoveryTokens')
 
     @staticmethod
+    def pending_reset_tokens():
+        return len(query_db('Select * FROM PasswordRecoveryTokens'))
+
+    @staticmethod
     def delete_token(token):
         return insert_db('DELETE FROM PasswordRecoveryTokens where token = ?', [token])
 
