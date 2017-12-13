@@ -126,9 +126,11 @@ class TemplateManager(object):
     def get_reset_password_template(errors=[]):
         alerts = TemplateManager.render_errors(errors)
 
+        recaptcha_template = TemplateManager.get_recaptcha_template()
         recover_template = TemplateManager.get_template(
             "reset-password-template", {
                 "form_target": url_for('reset_password'),
+                "recaptcha": recaptcha_template,
                 "csrf_token": g.get('csrf_cookie', '')})
 
         main_content = alerts + recover_template
@@ -139,12 +141,14 @@ class TemplateManager(object):
         return main_template
 
     @staticmethod
-    def get_update_password_template(token, errors=[]):
+    def get_update_password_template(errors=[], **kwds):
         alerts = TemplateManager.render_errors(errors)
 
+        recaptcha_template = TemplateManager.get_recaptcha_template()
         update_password_template = TemplateManager.get_template(
             "update-password-template", {
-                "form_target": url_for('update_password', token=token),
+                "form_target": url_for('update_password', token=kwds['token']),
+                "recaptcha": recaptcha_template,
                 "csrf_token": g.get('csrf_cookie', '')})
 
         main_content = alerts + update_password_template
@@ -529,6 +533,7 @@ class TemplateManager(object):
         <label for="email">Email</label>
         <input type="text" class="form-control" id="email" name="email" placeholder="">
     </div>
+    ${recaptcha}
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
     """,
@@ -542,7 +547,8 @@ class TemplateManager(object):
         <input type="password" class="form-control" id="password" name="password" aria-describedby="passwordHelp" placeholder="">
         <small id="passwordHelp" class="form-text text-muted">Must be at least 8 and maximum 256 characters</small>
     </div>
-      <button type="submit" class="btn btn-primary">Update Password</button>
+    ${recaptcha}
+    <button type="submit" class="btn btn-primary">Update Password</button>
 </form>
     """,
                  "register-template":

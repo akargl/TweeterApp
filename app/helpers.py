@@ -27,6 +27,7 @@ def get_or_create_key(filename):
 
 from app import app
 from models import Session, User
+from templates import TemplateManager
 
 
 def user_from_credentials():
@@ -162,6 +163,34 @@ def validate_recaptcha(response, remote_ip):
         return True
 
     return False
+
+
+def recaptcha_protection(template_mngr_func, **kwds):
+    if request.method == 'POST':
+        if app.config.get('RECAPTCHA_ENABLED', False):
+            response = request.form.get('g-recaptcha-response', '')
+            responder = getattr(TemplateManager, template_mngr_func)
+            if not responder:
+                abort(httplib.UNPROCESSABLE_ENTITY)
+
+            if not response:
+                return responder(["Invalid Captcha"], **kwds)
+
+            remote_ip = request.remote_addr
+            if not validate_recaptcha(response, remote_ip):
+                return responder(["Invalid Captcha"], **kwds)
+
+
+def recaptcha_protected(template_mngr_func):
+    def _recaptcha_protected(func):
+        @wraps(func)
+        def wrapper(*args, **kwds):
+            resp = recaptcha_protection(template_mngr_func)
+            if resp:
+                return resp
+            return func(*args, **kwds)
+        return wrapper
+    return _recaptcha_protected
 
 
 def already_logged_in(request):

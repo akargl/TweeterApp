@@ -225,7 +225,9 @@ Passwords are hased using PBKDF2. A different, random salt is used for every use
 
 ### Optional walls
 
-> ~~[1 FuzzyCoin] Password reset; e.g. email or via token handed out when user registers~~
+> 1 FuzzyCoin] Password reset; e.g. email or via token handed out when user registers
+
+The user can reset their password via a password reset feature. The user receives a link with a password reset token to update the password. This token is valid for 1 hour. 
 
 > [1 FuzzyCoin] Prevent brute forcing of passwords; e.g. via rate limiting or CAPTCHA
 
