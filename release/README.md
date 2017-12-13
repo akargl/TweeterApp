@@ -113,7 +113,7 @@ This section states the implemented security feautues. We list and comment the [
 
 > [1 point] Validate user input, e.g. white listing.
 
-Limit charset of username and password. See also below.
+Limited charset for username and password. See also below.
 
 > [1 point] Sanitize user input.
 > * Escape characters with special meaning before sending them back to the client.
@@ -121,13 +121,13 @@ Limit charset of username and password. See also below.
 
 Possible user inputs:
 
-* Username: Limited to alphanumeric characters
+* Username: Limited to alphanumeric characters.
 * Password: Only the hash is saved.
-* Session token & csrf token: Signature is checked before further use
-* File names of uploads: Renamed to numeric id. Extension is only shown in Content-Disposition header.
-* File uploads: Images get checked with imghdr, other file types won't be shown directly.
-* User posts and messages: Only shown as inner content of html elements. &, <, \>, \\, ' and / are escaped beforehand.
-* Url parameters such as file or user ids are all checked for being numeric only. 
+* Session token & CSRF token: Signature is checked before further usage-
+* File names of uploads: Renamed to numeric ID. Extension is only shown in the `Content-Disposition` header.
+* File uploads: Images get checked with `imghdr`, other file types won't be shown directly.
+* User posts and messages: Only shown as inner content of html elements. `&, <, \>, \\, '` and `/` are escaped beforehand.
+* URL parameters such as file or user ids are all checked for being numeric only. 
 
 > [2 points] Use CSP Headers.
 > * Disable inline scripts (If necessary, allow inline scripts with hashes or nonces).
@@ -139,13 +139,11 @@ We allow the following origins besides `'self'`:
 * Styles: Whitelist of hashes for inline styles used by Recaptcha. Chrome needs `'unsafe-hashed-attributes'` as well to accept this whitelist.
 * Scripts: Whitelist with nonce for Recaptcha
 * img: `data:` for Recaptcha
-* child-src: Recaptcha support for legacy browsers
-
+* `child-src`: Recaptcha support for legacy browsers
 
 > [1 point] Protect cookies by setting HTTP only flag.
 
 Done.
-
 
 > [1 point] Make sure that none of the following contexts contain untrusted user data (reason: escaping can be tricky):
 > * script tags : `<script>…[here]…</script>`
@@ -167,13 +165,11 @@ Set to `1; mode=block`.
 
 Implicitly disallowed with our settings for `script-src`.
 
-
 > [1 FuzzyCoin] Report CSP violations.
 
 We report CSP violation to a [Sentry](https://sentry.io) instance. Sentry is a plattform to for real-time monitoring of errors. You can access the account on https://sentry.io/auth/login/ with the credentials `Account: robert.schilling@gmx.at` and password `PW: 0RMNsufTzUYwlEWT`. **Please do not change the password!**
 
-This won't work if accessed via `localhost`, use `127.0.0.1` instead.
-
+This only works if the app is accessed via `127.0.0.1`. CSP reporting does **not** work when accessing via `localhost`.
 
 > [0.5 FuzzyCoin] Using a less complex language for user input allows to use a less complex parser, which is less likely to have bugs and makes the input easier to sanitize.
 
@@ -195,10 +191,9 @@ Datatypes are check and cast if needed before insertion.
 
 All queries use prepared statements.
 
-
 >[1 point] Apply principle of least privilege, e.g. by preventing the web app from performing DDL statements.
 
-The web app doesn't use DDL-functions except for helper functions for seeding and db creation called via command line.
+The web app doesn't use DDL-functions except for helper functions for seeding and database creation. These function can only be called via command line.
 
 ### Optional walls
 
@@ -232,7 +227,6 @@ Passwords are hased using PBKDF2. A different, random salt is used for every use
 
 > ~~[1 FuzzyCoin] Password reset; e.g. email or via token handed out when user registers~~
 
-
 > [1 FuzzyCoin] Prevent brute forcing of passwords; e.g. via rate limiting or CAPTCHA
 
 Google Recaptcha is used on registration and login pages.
@@ -247,8 +241,7 @@ Google Recaptcha is used on registration and login pages.
 
 > [2 points] Server-side checking for sufficient privileges on every request; e.g. session identifier, unguessable file links (for less sensitive resources). Also protect static resources.
 
-Each request checks the permissions for the requested operation first. Only non-sensitive files such as css and js served as static ressources.
-
+Each request checks the permissions for the requested operation first. Only non-sensitive files such as CSS and JS served as static ressources.
 
 > [1 point] Ask for password for sensitive requests
 
@@ -264,28 +257,26 @@ Following actions are protected by additional password requests:
 
 The follwoing endpoints are available. The roles User and Admin require authentication.
 
-| Endpoint                 | Guest | User | Admin |
-|--------------------------|-------|------|-------|
-| `GET /`                  |       | x    | x     |
-| `POST /`                 |       | x    | x     |
-| `GET /login`             | x     |      |       |
-| `POST /login`            | x     |      |       |
-| `POST /logout`           |       | x    | x     |
-| `GET /register`          | x     |      |       |
-| `POST /register`         | x     |      |       |
-| `GET /deregister`        |       | x    | x     |
-| `POST /deregister`       |       | x    |       |
-| `GET /messages`          |       | x    | x     |
-| `POST /messages`         |       | x    | x     |
-| `GET /administration`    |       |      | x     |
+| Endpoint                  | Guest | User | Admin |
+|---------------------------|-------|------|-------|
+| `GET /`                   |       | x    | x     |
+| `POST /`                  |       | x    | x     |
+| `GET /login`              | x     |      |       |
+| `POST /login`             | x     |      |       |
+| `POST /logout`            |       | x    | x     |
+| `GET /register`           | x     |      |       |
+| `POST /register`          | x     |      |       |
+| `GET /deregister`         |       | x    | x     |
+| `POST /deregister`        |       | x    |       |
+| `GET /messages`           |       | x    | x     |
+| `POST /messages`          |       | x    | x     |
+| `GET /administration`     |       |      | x     |
 | `PUT /user/<id> `         |       |      | x     |
 | `DELETE /user/<id> `      |       |      | x     |
-| `GET /api/files`         |       | x    | x     |
+| `GET /api/files`          |       | x    | x     |
 | `GET /api/files/<fileid>` |       | x    | x     |
-| `GET /api/users`         |       |      | x     |
+| `GET /api/users`          |       |      | x     |
 | `GET /static/*`           | x     | x    | x     |
-
-
 
 ## Session Management
 
@@ -329,7 +320,6 @@ All requests that change the state of the server contain a hidden field for the 
 
 We require reauthenticate for critical requests like account deletion or user priviledge promotion.
 
-
 ### Optional walls
 
 > ~~[0.5 FuzzyCoin] Check 'referer' in HTTP request~~
@@ -349,8 +339,6 @@ We are running the application under the `tweeter` user and application folder i
 ### Optional walls
 
 > ~~[2 FuzzyCoins] Apply and watch (reasonable) logging & monitoring.~~
-
-
 
 > [1.5 FuzzyCoins] Encrypt your database (so that an attacker, who gets the database files, cannot do anything with it when not having the decryption key)
 
