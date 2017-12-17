@@ -1,14 +1,16 @@
 # -*- encoding: utf-8 -*-
 
 import os
+import re
 import json
 import tempfile
 import pytest
 import time
 from StringIO import StringIO
 from base64 import b64encode
+from urlparse import urlparse
 from werkzeug.datastructures import FileStorage
-from app import app, db, models
+from app import app, db, models, mail
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -24,6 +26,8 @@ def client():
     app.config['CSRF_METHODS'] = []
     # No Recaptcha
     app.config['RECAPTCHA_ENABLED'] = False
+    # Initialize the mailer with the debug config
+    mail.init_app(app)
     client = app.test_client()
 
     with app.app_context():
@@ -65,8 +69,13 @@ def http_basic_headers(username, password):
     return { 'Authorization' : 'Basic ' + b64encode("{:s}:{:s}".format(username, password)) }
 
 
+def password_reset_link(email_body):
+    url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', email_body)[0]
+    return urlparse(url).path
+
+
 def test_database_cascading(client):
-    db.create_user('foobar', 'foobar', False)
+    db.create_user('foobar', 'foobar', 'foobar@foobar.com', False)
     u = models.User.get_user_by_name('foobar')
     models.Post.create(u.id, 'foo', None)
     models.Post.create(u.id, 'foo bar', None)
@@ -118,7 +127,7 @@ def test_already_logged_in(client):
 
 
 def test_successful_login_case_sensitivity(client):
-    response = login(client, '  ROOT ', 'root')
+    response = login(client, 'root ', 'root')
     assert b'Logged in as root' in response.data
 
 
@@ -147,6 +156,7 @@ def test_get_register(client):
 def test_successful_register(client):
     response = client.post('/register', data=dict(
         username='myuser',
+        email='myuser@fobar.com',
         password='MyPassWord'
     ), follow_redirects=True)
     assert b'Login' in response.data
@@ -156,6 +166,7 @@ def test_successful_register(client):
 def test_password_same_as_the_username_register(client):
     response = client.post('/register', data=dict(
         username='mynewuser',
+        email='mynewuser@fobar.com',
         password='mynewuser'
     ), follow_redirects=True)
     assert b'Password cannot be the same or similar as the username' in response.data
@@ -164,6 +175,7 @@ def test_password_same_as_the_username_register(client):
 def test_password_similar_as_the_username_register(client):
     response = client.post('/register', data=dict(
         username='mynewuser',
+        email='mynewuser@fobar.com',
         password='mynewuser1'
     ), follow_redirects=True)
     assert b'Password cannot be the same or similar as the username' in response.data
@@ -172,6 +184,7 @@ def test_password_similar_as_the_username_register(client):
 def test_password_reject_non_ascii_register(client):
     response = client.post('/register', data=dict(
         username='mynewuser',
+        email='mynewuser@fobar.com',
         password=u'My-Emoji-Password 👍'
     ), follow_redirects=True)
     assert b'Password cannot contain non-ASCII characters' in response.data
@@ -182,17 +195,36 @@ def test_register_no_form_data(client):
     assert response.status_code == 400
 
 
-def test_register_user_already_exists(client):
+def test_invalid_email_register(client):
+    response = client.post('/register', data=dict(
+        username='mynewuser',
+        email='@fobar.com',
+        password='thisismypassword'
+    ), follow_redirects=True)
+    assert b'Email address is not valid' in response.data
+
+
+def test_register_username_already_exists(client):
     response = client.post('/register', data=dict(
         username='root',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'User already exists' in response.data
 
 
+def test_register_email_already_exists(client):
+    response = client.post('/register', data=dict(
+        username='max',
+        email='root@root.com',
+        password='MyPassWord'
+    ))
+    assert b'User already exists' in response.data
+
 def test_register_user_already_exists_case_sensitivity(client):
     response = client.post('/register', data=dict(
-        username='ROOT',
+        username='root',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'User already exists' in response.data
@@ -201,6 +233,7 @@ def test_register_user_already_exists_case_sensitivity(client):
 def test_register_no_username(client):
     response = client.post('/register', data=dict(
         username='',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'Length of username invalid' in response.data
@@ -209,6 +242,7 @@ def test_register_no_username(client):
 def test_register_invalid_username(client):
     response = client.post('/register', data=dict(
         username='user/foo',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ))
     assert b'Username must only contain letters, numbers, and underscores' in response.data
@@ -217,6 +251,7 @@ def test_register_invalid_username(client):
 def test_register_no_password(client):
     response = client.post('/register', data=dict(
         username='myuser',
+        email='mynewuser@fobar.com',
         password=''
     ))
     assert b'Invalid password length' in response.data
@@ -227,6 +262,7 @@ def test_register_already_logged_in(client):
 
     response = client.post('/register', data=dict(
         username='myuser',
+        email='mynewuser@fobar.com',
         password='MyPassWord'
     ), follow_redirects=True)
     assert b'Logged in as root' in response.data
@@ -236,6 +272,7 @@ def test_register_already_logged_in(client):
 def test_register_too_short_password(client):
     response = client.post('/register', data=dict(
         username='myuser',
+        email='mynewuser@fobar.com',
         password='root'
     ))
     assert b'Invalid password length' in response.data
@@ -650,3 +687,99 @@ def test_session_expiry(client):
     response = client.post('/', follow_redirects=True)
 
     assert b'Login' in response.data
+
+
+def test_reset_password_redirect_to_index_if_login(client):
+    login(client, 'root', 'root')
+
+    response = client.get('/reset_password', follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'Logged in as root' in response.data
+
+
+def test_reset_password_wrong_params(client):
+    response = client.post('/reset_password')
+
+    assert response.status_code == 400
+
+
+def test_reset_password_invalid_email(client):
+    response = client.post('/reset_password', data=dict({ 'email' : 'root'}))
+
+    assert response.status_code == 200
+    assert b'Email address is not valid' in response.data
+
+
+def test_reset_password_non_existing_mail(client):
+    with mail.record_messages() as outbox:
+        response = client.post('/reset_password', data=dict({ 'email' : '1@2.com'}), follow_redirects=True)
+
+        assert response.status_code == 200
+        assert b'f your email address exists in our database, you will receive a password recovery link at your email address in a few minutes.' in response.data
+        assert len(outbox) == 0
+
+
+def test_reset_password_deliver_mail(client):
+    with mail.record_messages() as outbox:
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+
+        assert len(outbox) == 1
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 1
+        reset_link = password_reset_link(outbox[0].html)
+
+        resp = client.get(reset_link)
+        assert resp.status_code == 200
+        assert b'Update password' in resp.data
+
+        resp = client.post(reset_link, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
+        assert resp.status_code == 200
+        assert b'Passwort has been changed. Please login with your new password.' in resp.data
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 0
+
+        resp = login(client, 'root', 'mychangedpassword')
+        assert resp.status_code == 200
+        assert b'Logged in as root' in resp.data
+
+
+def test_reset_password_clears_pending_request_tokens(client):
+    with mail.record_messages() as outbox:
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+
+        assert len(outbox) == 2
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 2
+        reset_link = password_reset_link(outbox[1].html)
+
+
+
+def test_update_password_wrong_token(client):
+    response = client.post('/update_password/foobar', follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'Invalid password recovery token.' in response.data
+
+
+def test_update_password_expired(client):
+    app.config['PASSWORD_RECOVERY_EXPIRATION_TIMEOUT'] = 5
+
+    with mail.record_messages() as outbox:
+        resp = client.post('/reset_password', data=dict({ 'email' : 'root@root.com'}), follow_redirects=True)
+
+        assert len(outbox) == 1
+        reset_link = password_reset_link(outbox[0].html)
+
+        time.sleep(6)
+
+        resp = client.post(reset_link, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
+        assert resp.status_code == 200
+        assert b'Password recovery token expired.' in resp.data
+
+
+def test_update_password_logged_in(client):
+    login(client, 'root', 'root')
+
+    response = client.post('/update_password/foobar', follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'Logged in as root' in response.data

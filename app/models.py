@@ -3,25 +3,20 @@ import re
 import hashlib
 import time
 import imghdr
-from hmac import compare_digest
 from base64 import b64encode
+from difflib import SequenceMatcher
+from os import path
 from werkzeug.utils import secure_filename
 from werkzeug.security import safe_str_cmp, DEFAULT_PBKDF2_ITERATIONS
 from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
 from db import query_db, insert_db
 from app import app
-from os import path
-from difflib import SequenceMatcher
 
 
 MAX_CONTENT_LENGTH = 4 * 140
 
 
 class User:
-    # int id (Primary key)
-    # str username
-    # str password_token
-    # bool is_admin
     MAX_USERNAME_LEN = 256
     MIN_PASSWORD_LEN = 8
     MAX_PASSWORD_LEN = 256
@@ -30,10 +25,11 @@ class User:
     HASH_ALGO = 'sha256'
     HASH_ITERATIONS = 50000
 
-    def __init__(self, id, username, is_admin):
+    def __init__(self, id, username, email, is_admin):
         self.id = id
         self.username = username
         self.is_admin = is_admin
+        self.email = email
 
     def serialize(self):
         return {
@@ -42,6 +38,19 @@ class User:
             'is_admin': self.is_admin,
         }
 
+    def update_password(self, new_password):
+        errors = User.verify_password_policy(new_password)
+        if len(errors):
+            return errors
+
+        salt, hashed_pw = User.create_salt_and_hashed_password(new_password)
+
+        result = insert_db('UPDATE Users SET password_salt = ?, password_token = ? WHERE id = ?', [
+                           salt, hashed_pw, self.id])
+        if result is None:
+            return ['Could not reset password']
+        return []
+        
     @staticmethod
     def similar(a, b):
         return SequenceMatcher(None, a, b).ratio()
@@ -51,25 +60,40 @@ class User:
         return any(ord(c) >= 128 for c in s)
 
     @staticmethod
-    def verify_credential_policy(username, password):
-        """ Checks against the password policy """
+    def validate_email(email):
+        # Regex taken from https://stackoverflow.com/questions/201323/using-a-regular-expression-to-validate-an-email-address
+        if not re.match("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])", email):
+            return ['Email address is not valid']
+        return []
+
+    @staticmethod
+    def verify_password_policy(password):
         errors = []
-        if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
-            errors.append(
-                'Length of username invalid. Maximum length: {:d}'.format(
-                    User.MAX_USERNAME_LEN))
         if len(password) < User.MIN_PASSWORD_LEN or len(
                 password) > User.MAX_PASSWORD_LEN:
             errors.append(
                 'Invalid password length. Minimum length: {:d}, Maximum length: {:d}'.format(
                     User.MIN_PASSWORD_LEN, User.MAX_PASSWORD_LEN))
-        if User.similar(username, password) > 0.8:
-            errors.append('Password cannot be the same or similar as the username')
         if User.contains_non_ascii(password):
             errors.append('Password cannot contain non-ASCII characters')
+        return errors
+
+    @staticmethod
+    def verify_credential_policy(username, email, password):
+        """ Checks against the user and password policy """
+        errors = []
+        if len(username) < 1 or len(username) > User.MAX_USERNAME_LEN:
+            errors.append(
+                'Length of username invalid. Maximum length: {:d}'.format(
+                    User.MAX_USERNAME_LEN))
+        
+        if User.similar(username, password) > 0.8:
+            errors.append('Password cannot be the same or similar as the username')
         if not re.match("^[A-Za-z0-9_-]*$", username):
             errors.append(
                 'Username must only contain letters, numbers, and underscores')
+        errors += User.validate_email(email)
+        errors += User.verify_password_policy(password)
         return errors
 
     @staticmethod
@@ -79,7 +103,7 @@ class User:
             return []
         users = []
         for r in result:
-            users.append(User(r['id'], r['username'], bool(r['is_admin'])))
+            users.append(User(r['id'], r['username'], r['email'], bool(r['is_admin'])))
         return users
 
     @staticmethod
@@ -123,7 +147,7 @@ class User:
         if user_data is None:
             return None
         return User(user_data['id'], user_data[
-                    'username'], bool(user_data['is_admin']))
+                    'username'], user_data['email'], bool(user_data['is_admin']))
 
     @staticmethod
     def get_user_by_name(username):
@@ -134,7 +158,18 @@ class User:
         if user_data is None:
             return None
         return User(user_data['id'], user_data[
-                    'username'], user_data['is_admin'])
+                    'username'], user_data['email'], user_data['is_admin'])
+
+    @staticmethod
+    def get_user_by_email(email):
+        user_data = query_db(
+            'SELECT * from Users WHERE email = ?',
+            [email],
+            one=True)
+        if user_data is None:
+            return None
+        return User(user_data['id'], user_data[
+                    'username'], user_data['email'], user_data['is_admin'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
@@ -148,7 +183,7 @@ class User:
                 user_data['password_token'], hashed_password):
             return None
         return User(user_data['id'], user_data[
-                    'username'], user_data['is_admin'])
+                    'username'], user_data['email'], user_data['is_admin'])
 
     @staticmethod
     def get_salt(username):
@@ -161,15 +196,18 @@ class User:
         return salt['password_salt']
 
     @staticmethod
-    def create(username, salt, hashed_password, is_admin=False):
+    def create(username, email, salt, hashed_password, is_admin=False):
         # usernames are case insensitive so we need to check first regardless
         # of unique constraint
         if User.get_user_by_name(username):
-            app.logger.debug("User already exists")
+            app.logger.debug("Username already exists")
+            return None
+        if User.get_user_by_email(email):
+            app.logger.debug("Email already exists")
             return None
         result = insert_db(
-            'INSERT into Users (username, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?)', [
-                username, salt, hashed_password, int(is_admin)])
+            'INSERT into Users (username, email, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?, ?)', [
+                username, email, salt, hashed_password, int(is_admin)])
         if not result:
             return None
         return User.get_user_by_name(username)
@@ -177,7 +215,7 @@ class User:
     def delete(self):
         app.logger.debug("Delete user with id {:d}".format(self.id))
         # Delete user. All dependent data is deleted via database cascading
-        insert_db('DELETE FROM Users WHERE id = ?', [self.id])
+        return insert_db('DELETE FROM Users WHERE id = ?', [self.id])
 
     def change_role(self, is_admin):
         if self.is_admin == is_admin:
@@ -306,9 +344,7 @@ class Session:
 
     @staticmethod
     def clear():
-        users = User.get_all()
-        for u in users:
-            Session.delete_all(u.id)
+        insert_db('DELETE FROM Sessions')
 
     @staticmethod
     def active_user(session_token):
@@ -346,8 +382,8 @@ class Session:
             "Create new session for user {:s}".format(user.username))
         session_token = os.urandom(Session.TOKEN_LENGTH)
         session_token = b64encode(session_token).decode('utf-8')
-        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
         session_token = signer.dumps(session_token)
         csrf_token = Session.create_csrf_token()
 
@@ -461,3 +497,82 @@ class FileWrapper:
         app.logger.debug("Saving attachment to {:s}".format(storage_path))
         imgfile.save(storage_path)
         return f_wrapper
+
+
+class PasswordRecoveryTokens:
+    def __init__(self, id, token, user):
+        self.id = id
+        self.token = token
+        self.user = user
+
+    def delete(self):
+        return insert_db('DELETE FROM PasswordRecoveryTokens WHERE user_id = ?', [self.user.id])
+
+    @staticmethod
+    def has_expired(token):
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        try:
+            signer.loads(token, max_age=app.config['PASSWORD_RECOVERY_EXPIRATION_TIMEOUT'])
+        except SignatureExpired:
+            app.logger.debug('Password recovery token expired.')
+            return ['Password recovery token expired.']
+        except BadData:
+            app.logger.debug('Password recovery token invalid.')
+            return ['Password recovery token invalid.']
+        return []
+
+    @staticmethod
+    def clear():
+        return insert_db('DELETE FROM PasswordRecoveryTokens')
+
+    @staticmethod
+    def pending_reset_tokens():
+        return len(query_db('Select * FROM PasswordRecoveryTokens'))
+
+    @staticmethod
+    def delete_token(token):
+        return insert_db('DELETE FROM PasswordRecoveryTokens where token = ?', [token])
+
+    @staticmethod
+    def hash_token(token):
+        hash_object = hashlib.sha512(token)
+        hashed_token = hash_object.hexdigest()
+        hashed_token = b64encode(hashed_token)
+        return hashed_token
+
+    @staticmethod
+    def create(user):
+        token = os.urandom(32)
+        token = b64encode(token, '-_')
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        signed_token = signer.dumps(token)
+        hashed_token = PasswordRecoveryTokens.hash_token(signed_token)
+
+        status = insert_db('INSERT into PasswordRecoveryTokens (user_id, token) VALUES (?, ?)', [user.id, hashed_token])
+        if status:
+            return signed_token
+        else:
+            return None
+
+    @staticmethod
+    def get_token(token):
+        hashed_token = PasswordRecoveryTokens.hash_token(token)
+
+        resp = query_db('SELECT * from PasswordRecoveryTokens WHERE token = ?', [hashed_token], one=True)
+        if not resp:
+            app.logger.debug('Could not find the token')
+            return ['Invalid password recovery token.'], None
+
+        user = User.get_user_by_id(resp['user_id'])
+        if not user:
+            app.logger.debug('Could not find the user')
+            PasswordRecoveryTokens.delete_token(hashed_token)
+            return ['Invalid user for password recovery.'], None
+
+        errors = PasswordRecoveryTokens.has_expired(token)
+        if len(errors):
+            PasswordRecoveryTokens.delete_token(hashed_token)
+            return errors, None
+
+        return [], PasswordRecoveryTokens(resp['id'], token, user)
+

@@ -2,10 +2,12 @@ import os
 import httplib
 import datetime
 from base64 import b64encode
-from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify
-from app import app
-from helpers import authentication_required, validate_recaptcha, unautenticated_csrf_protection
-from models import Session, User, Post, Message, FileWrapper
+import flask_mail
+from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify, flash
+from app import app, mail
+from helpers import authentication_required, validate_recaptcha, already_logged_in, \
+                    unautenticated_csrf_protection, recaptcha_protected, recaptcha_protection
+from models import Session, User, Post, Message, FileWrapper, PasswordRecoveryTokens
 from templates import TemplateManager
 
 
@@ -92,33 +94,18 @@ def index():
 
 @app.route("/login", methods=['GET', 'POST'])
 @unautenticated_csrf_protection
+@recaptcha_protected('get_login_template')
 def login():
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
+        return redirect(url_for('index'))
+
     # Post: params[username, password]
     if request.method == 'GET':
-        # If the user is already logged in, just display the index
-        user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
-        if user:
-            # Already logged in
-            return redirect(url_for('index'))
-
         return TemplateManager.get_login_template()
     else:
         username = request.form['username'].strip()
         password = request.form['password']
-
-        user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
-        if user:
-            # Already logged in
-            return redirect(url_for('index'), code=httplib.SEE_OTHER)
-
-        if app.config.get('RECAPTCHA_ENABLED', False):
-            response = request.form.get('g-recaptcha-response', '')
-            if not response:
-                return TemplateManager.get_login_template(["Invalid Captcha"])
-
-            remote_ip = request.remote_addr
-            if not validate_recaptcha(response, remote_ip):
-                return TemplateManager.get_login_template(["Invalid Captcha"])
 
         user = User.check_password(username, password)
         if not user:
@@ -130,7 +117,8 @@ def login():
             return TemplateManager.get_login_template(
                 ["Could not create session"])
 
-        # Make the response and set the cookie
+        # Make the resp
+        # onse and set the cookie
         url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
 
@@ -138,21 +126,89 @@ def login():
         return response
 
 
+@app.route("/reset_password", methods=['GET', 'POST'])
+@unautenticated_csrf_protection
+@recaptcha_protected('get_reset_password_template')
+def reset_password():
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
+        return redirect(url_for('index'))
+
+    if request.method == 'GET':
+        return TemplateManager.get_reset_password_template()
+    elif request.method == 'POST':
+        email = request.form['email'].strip()
+
+        errors = User.validate_email(email)
+        if len(errors):
+            return TemplateManager.get_reset_password_template(errors)
+
+        user = User.get_user_by_email(email)
+        if user:
+            token = PasswordRecoveryTokens.create(user)
+            if not token:
+                return TemplateManager.get_reset_password_template(['Could not reset password. Please try again.'])
+
+            # Send a password recovery token via email
+            msg = flask_mail.Message("Tweeter - Password Recovery",
+                  sender="tweeterappmailer@gmail.com",
+                  recipients=[user.email])
+            msg.html = 'To reset your password click <a href="https://{:s}/update_password/{:s}">here</a>'.format(request.host, token)
+            mail.send(msg)
+
+        flash('If your email address exists in our database, you will receive a password recovery link at your email address in a few minutes.')
+        return redirect(url_for('login'))
+
+
+@app.route("/update_password/<token>", methods=['GET', 'POST'])
+@unautenticated_csrf_protection
+def update_password(token):
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
+        return redirect(url_for('index'))
+
+    resp = recaptcha_protection('get_update_password_template', token=token)
+    if resp:
+        return resp
+
+    errors, reset_token = PasswordRecoveryTokens.get_token(token)
+    if len(errors):
+        app.logger.debug('Invalid password recovery token.')
+        [flash(e) for e in errors]
+        return redirect(url_for('login'))
+
+
+    if request.method == 'GET':
+        return TemplateManager.get_update_password_template([], token=reset_token.token)
+    elif request.method == 'POST':
+        password = request.form['password']
+        errors = reset_token.user.update_password(password)
+
+        if len(errors):
+            [app.logger.debug(e) for e in errors]
+            return TemplateManager.get_update_password_template(errors, token=reset_token.token)
+
+        # Delete the used token
+        reset_token.delete()
+        flash('Passwort has been changed. Please login with your new password.')
+        return redirect(url_for('login'))
+
+
 @app.route("/logout", methods=['POST'])
 @authentication_required()
 def logout():
     Session.delete(g.user.id, g.session_token)
-
+    flash('Successfully logged out.')
     return ("", httplib.NO_CONTENT)
 
 
 @app.route("/register", methods=['GET', 'POST'])
 @unautenticated_csrf_protection
+@recaptcha_protected('get_register_template')
 def register():
-    # Post: params[username, password]
-    user, _ = Session.active_user(request.cookies.get(Session.SESSION_KEY))
-    if user:
-        # Already logged in
+    # Post: params[username, password
+    # If the user is already logged in, just display the index
+    if already_logged_in(request):
         return redirect(url_for('index'))
 
     if request.method == 'GET':
@@ -160,27 +216,20 @@ def register():
     else:
         errors = []
         username = request.form['username'].strip()
+        email = request.form['email'].strip()
         password = request.form['password']
 
-        if app.config.get('RECAPTCHA_ENABLED', False):
-            response = request.form.get('g-recaptcha-response', '')
-            if not response:
-                return TemplateManager.get_register_template(["Invalid Captcha"])
-
-            remote_ip = request.remote_addr
-            if not validate_recaptcha(response, remote_ip):
-                return TemplateManager.get_register_template(["Invalid Captcha"])
-
-        errors = User.verify_credential_policy(username, password)
+        errors = User.verify_credential_policy(username, email, password)
         if len(errors):
             return TemplateManager.get_register_template(errors)
 
         salt, hashed_password = User.create_salt_and_hashed_password(password)
-        user = User.create(username, salt, hashed_password)
+        user = User.create(username, email, salt, hashed_password)
         if user is None:
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)
 
+        flash('Succesfully created user. Please login!')
         return redirect(url_for('login'), code=httplib.SEE_OTHER)
 
 
@@ -198,6 +247,7 @@ def deregister():
 
         g.user.delete()
         g.user = None
+        flash('Successfully deleted the account.')
         return redirect(url_for('login'))
 
 

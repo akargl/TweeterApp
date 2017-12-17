@@ -1,5 +1,5 @@
 from string import Template
-from flask import url_for, g
+from flask import url_for, g, get_flashed_messages
 from models import User
 from app import app
 import datetime
@@ -41,19 +41,28 @@ class TemplateManager(object):
         return recaptcha_template
 
     @staticmethod
-    def get_register_template(errors=[]):
+    def render_errors(errors):
         escaped_errors = [
             TemplateManager.escape_for_html_element_context(e) for e in errors]
+        return "\n".join(TemplateManager.get_template(
+            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
 
+    @staticmethod
+    def render_messages(messages):
+        escaped_messages = [TemplateManager.escape_for_html_element_context(m) for m in messages]
+        return "\n".join(TemplateManager.get_template(
+            "alert-template", {"alert_type": "alert-info", "alert_content": m}) for m in escaped_messages)
+
+    @staticmethod
+    def get_register_template(errors=[]):
+        alerts = TemplateManager.render_errors(errors)
+  
         recaptcha_template = TemplateManager.get_recaptcha_template()
         register_template = TemplateManager.get_template(
             "register-template", {
                 "form_target": url_for('register'),
                 "recaptcha": recaptcha_template,
                 "csrf_token": g.get('csrf_cookie', '')})
-
-        alerts = "\n".join(TemplateManager.get_template(
-            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
 
         main_content = alerts + register_template
 
@@ -64,8 +73,8 @@ class TemplateManager(object):
 
     @staticmethod
     def get_deregister_template(errors=[]):
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
+        alerts = TemplateManager.render_errors(errors)
+
         escaped_username = TemplateManager.escape_for_html_element_context(
             g.user.username)
 
@@ -73,8 +82,6 @@ class TemplateManager(object):
             "deregister-template",
             {"form_target": url_for('deregister'), 'csrf_token': g.get('csrf_token', '')})
 
-        alerts = "\n".join(TemplateManager.get_template(
-            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
         nav_links = "\n".join([TemplateManager.generate_nav_link(
             "Home", "/", active=True), TemplateManager.generate_nav_link("Messages", "messages")])
 
@@ -98,8 +105,8 @@ class TemplateManager(object):
 
     @staticmethod
     def get_login_template(errors=[]):
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
+        alerts = TemplateManager.render_errors(errors)
+        alerts += TemplateManager.render_messages(get_flashed_messages())
 
         recaptcha_template = TemplateManager.get_recaptcha_template()
         login_template = TemplateManager.get_template(
@@ -107,9 +114,6 @@ class TemplateManager(object):
                 "form_target": url_for('login'),
                 "recaptcha": recaptcha_template,
                 "csrf_token": g.get('csrf_cookie', '')})
-
-        alerts = "\n".join(TemplateManager.get_template(
-            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
 
         main_content = alerts + login_template
 
@@ -119,9 +123,44 @@ class TemplateManager(object):
         return main_template
 
     @staticmethod
+    def get_reset_password_template(errors=[]):
+        alerts = TemplateManager.render_errors(errors)
+
+        recaptcha_template = TemplateManager.get_recaptcha_template()
+        recover_template = TemplateManager.get_template(
+            "reset-password-template", {
+                "form_target": url_for('reset_password'),
+                "recaptcha": recaptcha_template,
+                "csrf_token": g.get('csrf_cookie', '')})
+
+        main_content = alerts + recover_template
+
+        main_template = TemplateManager.get_template(
+            "simple-main-template", {"main_title": "Reset Password", "main_content": main_content})
+
+        return main_template
+
+    @staticmethod
+    def get_update_password_template(errors=[], **kwds):
+        alerts = TemplateManager.render_errors(errors)
+
+        recaptcha_template = TemplateManager.get_recaptcha_template()
+        update_password_template = TemplateManager.get_template(
+            "update-password-template", {
+                "form_target": url_for('update_password', token=kwds['token']),
+                "recaptcha": recaptcha_template,
+                "csrf_token": g.get('csrf_cookie', '')})
+
+        main_content = alerts + update_password_template
+
+        main_template = TemplateManager.get_template(
+            "simple-main-template", {"main_title": "Reset Password", "main_content": main_content})
+
+        return main_template
+
+    @staticmethod
     def get_index_template(posts, errors=[]):
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
+        alerts = TemplateManager.render_errors(errors)
         escaped_username = TemplateManager.escape_for_html_element_context(
             g.user.username)
 
@@ -130,9 +169,6 @@ class TemplateManager(object):
         if g.user.is_admin:
             nav_links += TemplateManager.generate_nav_link(
                 "Administration", "administration")
-
-        alerts = "\n".join(TemplateManager.get_template(
-            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
 
         max_attachment_size = str(
             app.config['MAX_CONTENT_LENGTH'] / 1024 / 1024) + "MB"
@@ -200,8 +236,7 @@ class TemplateManager(object):
 
     @staticmethod
     def get_messages_template(messages, errors=[]):
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
+        alerts = TemplateManager.render_errors(errors)
         escaped_username = TemplateManager.escape_for_html_element_context(
             g.user.username)
 
@@ -210,9 +245,6 @@ class TemplateManager(object):
         if g.user.is_admin:
             nav_links += TemplateManager.generate_nav_link(
                 "Administration", "administration")
-
-        alerts = "\n".join(TemplateManager.get_template(
-            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
 
         max_attachment_size = str(
             app.config['MAX_CONTENT_LENGTH'] / 1024 / 1024) + "MB"
@@ -290,8 +322,7 @@ class TemplateManager(object):
 
     @staticmethod
     def get_administration_template(users, errors):
-        escaped_errors = [
-            TemplateManager.escape_for_html_element_context(e) for e in errors]
+        alerts = TemplateManager.render_errors(errors)
         escaped_username = TemplateManager.escape_for_html_element_context(
             g.user.username)
 
@@ -307,9 +338,6 @@ class TemplateManager(object):
                     "Administration",
                     "administration",
                     active=True)])
-
-        alerts = "\n".join(TemplateManager.get_template(
-            "alert-template", {"alert_type": "alert-danger", "alert_content": e}) for e in escaped_errors)
 
         user_list_group = ""
         for u in users:
@@ -385,10 +413,10 @@ class TemplateManager(object):
 
     <title>Tweeter - ${main_title}</title>
 
-    <link href="static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="static/css/starter-template.css" rel="stylesheet">
-    <link href="static/css/tweeter.css" rel="stylesheet">
-    <script src="static/js/tweeter.js"></script>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/starter-template.css" rel="stylesheet">
+    <link href="/static/css/tweeter.css" rel="stylesheet">
+    <script src="/static/js/tweeter.js"></script>
     <meta name="csrf-token" content="${csrf_token}"/>
 </head>
 
@@ -428,9 +456,9 @@ class TemplateManager(object):
         ${main_content}
     </div>
 
-    <script src="static/js/jquery-3.2.1.slim.min.js"></script>
-    <script src="static/js/popper.min.js"></script>
-    <script src="static/js/bootstrap.min.js"></script>
+    <script src="/static/js/jquery-3.2.1.slim.min.js"></script>
+    <script src="/static/js/popper.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
 </body>
 
 </html>
@@ -448,9 +476,9 @@ class TemplateManager(object):
 
     <title>Tweeter - ${main_title}</title>
 
-    <link href="static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="static/css/starter-template.css" rel="stylesheet">
-    <link href="static/css/tweeter.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/starter-template.css" rel="stylesheet">
+    <link href="/static/css/tweeter.css" rel="stylesheet">
 </head>
 
 <body>
@@ -471,9 +499,9 @@ class TemplateManager(object):
         ${main_content}
     </div>
 
-    <script src="static/js/jquery-3.2.1.slim.min.js"></script>
-    <script src="static/js/popper.min.js"></script>
-    <script src="static/js/bootstrap.min.js"></script>
+    <script src="/static/js/jquery-3.2.1.slim.min.js"></script>
+    <script src="/static/js/popper.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
 </body>
 </html>
     """,
@@ -493,9 +521,36 @@ class TemplateManager(object):
     </div>
     ${recaptcha}
     <button type="submit" class="btn btn-primary">Login</button>
+    <h5><a href="reset_password">Forgot your password?</a></h5>
 </form>
     """,
-
+                "reset-password-template":
+                 """
+<h4>Reset password</a></h4>
+<form action="${form_target}" method="POST">
+    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="text" class="form-control" id="email" name="email" placeholder="">
+    </div>
+    ${recaptcha}
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+    """,
+                "update-password-template":
+                 """
+<h4>Update password</a></h4>
+<form action="${form_target}" method="POST">
+    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" class="form-control" id="password" name="password" aria-describedby="passwordHelp" placeholder="">
+        <small id="passwordHelp" class="form-text text-muted">Must be at least 8 and maximum 256 characters</small>
+    </div>
+    ${recaptcha}
+    <button type="submit" class="btn btn-primary">Update Password</button>
+</form>
+    """,
                  "register-template":
                  """
 <h1>Create account</h1>
@@ -505,6 +560,11 @@ class TemplateManager(object):
         <label for="username">Username</label>
         <input type="text" class="form-control" id="username" name="username" aria-describedby="usernameHelp" placeholder="">
         <small id="usernameHelp" class="form-text text-muted">Max 256 characters</small>
+    </div>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="text" class="form-control" id="email" name="email" aria-describedby="emailHelp" placeholder="">
+        <small id=emailHelp" class="form-text text-muted">Valid email address</small>
     </div>
     <div class="form-group">
         <label for="password">Password</label>
