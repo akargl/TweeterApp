@@ -6,8 +6,7 @@ CREATE TABLE "Users" (
 	`password_token`	TEXT NOT NULL,
 	`email`	TEXT NOT NULL,
 	`is_admin`	INTEGER NOT NULL,
-	`otp_secret` TEXT NOT NULL,
-	`twofa_activated` INTEGER NOT NULL
+	`otp_secret` TEXT NOT NULL
 );
 CREATE TABLE `Sessions` (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,

@@ -58,7 +58,6 @@ def apply_headers(response):
 @app.route("/", methods=['GET', 'POST'])
 @authentication_required()
 def index():
-    # Post: params[content, file]
     if request.method == 'GET':
         posts = Post.get_all()
         return TemplateManager.get_index_template(posts)
@@ -96,7 +95,7 @@ def index():
 
 
 @app.route("/login", methods=['GET', 'POST'])
-@unautenticated_csrf_protection()
+@unautenticated_csrf_protection
 @recaptcha_protected('get_login_template')
 def login():
     # If the user is already logged in, just display the index
@@ -104,7 +103,6 @@ def login():
         flash('Already logged in.')
         return redirect(url_for('index'))
 
-    # Post: params[username, password]
     if request.method == 'GET':
         return TemplateManager.get_login_template()
     else:
@@ -116,10 +114,6 @@ def login():
         if not user:
             return TemplateManager.get_login_template(
                 ["Invalid Login or password"])
-
-        if not user.twofa_activated:
-            return TemplateManager.get_login_template(
-                ['2FA has not been activated. Please contact your administrator.'])
 
         if not user.verify_twofa(otptoken):
             return TemplateManager.get_login_template(
@@ -139,7 +133,7 @@ def login():
 
 
 @app.route("/reset_password", methods=['GET', 'POST'])
-@unautenticated_csrf_protection()
+@unautenticated_csrf_protection
 @recaptcha_protected('get_reset_password_template')
 def reset_password():
     # If the user is already logged in, just display the index
@@ -174,7 +168,7 @@ def reset_password():
 
 
 @app.route("/update_password/<token>", methods=['GET', 'POST'])
-@unautenticated_csrf_protection()
+@unautenticated_csrf_protection
 def update_password(token):
     # If the user is already logged in, just display the index
     if already_logged_in(request):
@@ -216,10 +210,9 @@ def logout():
 
 
 @app.route("/register", methods=['GET', 'POST'])
-@unautenticated_csrf_protection()
+@unautenticated_csrf_protection
 @recaptcha_protected('get_register_template')
 def register():
-    # Post: params[username, password
     # If the user is already logged in, just display the index
     if already_logged_in(request):
         flash('Already logged in.')
@@ -246,16 +239,17 @@ def register():
         signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
         user_token = signer.dumps("{0}".format(user.id))
 
+        flash('Registration complete. Please login.')
         return TemplateManager.get_2fa_template(token=user_token), httplib.OK, {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0' }
 
 
-@app.route('/activate_2fa/<string:token>', methods=['GET', 'POST'])
-@unautenticated_csrf_protection(False)
+@app.route('/activate_2fa/<string:token>', methods=['GET'])
 def activate_2fa(token):
-    # TODO: What to do if user is already logged in
+    if already_logged_in(request):
+        return '', httplib.NO_CONTENT
 
     # Validate the 2FA token in order to retrieve the user id
     signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
@@ -276,11 +270,6 @@ def activate_2fa(token):
         app.logger.debug('2FA User not found')
         return redirect(url_for('login'))
 
-    if user.twofa_activated:
-        flash('User already activated 2FA authentication.')
-        app.logger.debug('2FA already activated', 'error')
-        return redirect(url_for('login'))
-
     if request.method == 'GET':
         url = pyqrcode.create(user.get_totp_uri())
         stream = BytesIO()
@@ -292,12 +281,8 @@ def activate_2fa(token):
             'Pragma': 'no-cache',
             'Expires': '0'}
     elif request.method == 'POST':
-        if len(user.activate_twofa()):
-            flash('Could not activate 2FA authentication.', 'error')
-            app.logger.debug('2FA activated')
-        else:
-            flash('Two Factor auth activated. Please login.')
-            app.logger.debug('2FA activated')
+        flash('Two Factor auth activated. Please login.')
+        app.logger.debug('2FA activated')
         return redirect(url_for('login'))
 
 

@@ -26,13 +26,12 @@ class User:
     HASH_ALGO = 'sha256'
     HASH_ITERATIONS = 50000
 
-    def __init__(self, id, username, email, is_admin, otp_secret, twofa_activated):
+    def __init__(self, id, username, email, is_admin, otp_secret):
         self.id = id
         self.username = username
         self.is_admin = is_admin
         self.email = email
         self.otp_secret = otp_secret
-        self.twofa_activated = twofa_activated
 
     def serialize(self):
         return {
@@ -43,14 +42,6 @@ class User:
 
     def get_totp_uri(self):
         return pyotp.totp.TOTP(self.otp_secret).provisioning_uri(self.username, issuer_name='Tweeter')
-
-    def activate_twofa(self):
-        result = insert_db('UPDATE Users SET twofa_activated = 1 WHERE id = ?', [self.id])
-        app.logger.debug(result)
-        if result is None:
-            return ['Could not activate twofa']
-        self.twofa_activated = True
-        return []
 
     def verify_twofa(self, token):
         totp = pyotp.TOTP(self.otp_secret)
@@ -165,7 +156,7 @@ class User:
         if u is None:
             return None
         return User(u['id'], u['username'], u['email'], 
-                    u['is_admin'], u['otp_secret'], u['twofa_activated'])
+                    u['is_admin'], u['otp_secret'])
 
     @staticmethod
     def get_user_by_name(username):
@@ -176,7 +167,7 @@ class User:
         if u is None:
             return None
         return User(u['id'], u['username'], u['email'], 
-                    u['is_admin'], u['otp_secret'], u['twofa_activated'])
+                    u['is_admin'], u['otp_secret'])
 
     @staticmethod
     def get_user_by_email(email):
@@ -187,7 +178,7 @@ class User:
         if u is None:
             return None
         return User(u['id'], u['username'], u['email'], 
-                    u['is_admin'], u['otp_secret'], u['twofa_activated'])
+                    u['is_admin'], u['otp_secret'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
@@ -201,7 +192,7 @@ class User:
                 u['password_token'], hashed_password):
             return None
         return User(u['id'], u['username'], 
-                    u['email'], u['is_admin'], u['otp_secret'], u['twofa_activated'])
+                    u['email'], u['is_admin'], u['otp_secret'])
 
     @staticmethod
     def get_salt(username):
@@ -214,7 +205,7 @@ class User:
         return salt['password_salt']
 
     @staticmethod
-    def create(username, email, salt, hashed_password, is_admin=False, twofa_activated=False):
+    def create(username, email, salt, hashed_password, is_admin=False):
         # usernames are case insensitive so we need to check first regardless
         # of unique constraint
         if User.get_user_by_name(username):
@@ -226,8 +217,8 @@ class User:
 
         otp_secret = pyotp.random_base32()
         result = insert_db(
-            'INSERT into Users (username, email, password_salt, password_token, is_admin, otp_secret, twofa_activated) VALUES (?, ?, ?, ?, ?, ?, ?)', [
-                username, email, salt, hashed_password, int(is_admin), otp_secret, int(twofa_activated)])
+            'INSERT into Users (username, email, password_salt, password_token, is_admin, otp_secret) VALUES (?, ?, ?, ?, ?, ?)', [
+                username, email, salt, hashed_password, int(is_admin), otp_secret])
         if not result:
             return None
         return User.get_user_by_name(username)

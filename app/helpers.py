@@ -111,44 +111,41 @@ def csrf_protection():
         abort(httplib.UNPROCESSABLE_ENTITY)
 
 
-def unautenticated_csrf_protection(fresh_cookie=True):
-    def _unautenticated_csrf_protection(func):
-        @wraps(func)
-        def func_wrapper(*args, **kwds):
-            if fresh_cookie:
-                g.csrf_cookie = Session.create_csrf_token()
-            if request.method not in app.config['CSRF_METHODS']:
-                return func(*args, **kwds)
-
-            # First CSRF token from the form
-            form_csrf_token = request.form.get('csrf-token')
-            if not form_csrf_token:
-                app.logger.debug('No form token')
-                abort(httplib.UNPROCESSABLE_ENTITY)
-
-            # Second CSRF token from the cookie
-            cookie_csrf_token = request.cookies.get(Session.CSRF_KEY)
-            if not cookie_csrf_token:
-                app.logger.debug('No cookie')
-                abort(httplib.UNPROCESSABLE_ENTITY)
-
-            signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-            try:
-                signer.loads(form_csrf_token, max_age=app.config['MAX_CSRF_TOKEN_AGE'])
-            except SignatureExpired:
-                app.logger.debug('Signature invalid')
-                abort(abort(httplib.UNPROCESSABLE_ENTITY))
-            except BadData:
-                app.logger.debug('bad data')
-                abort(abort(httplib.UNPROCESSABLE_ENTITY))
-
-            match = safe_str_cmp(form_csrf_token, cookie_csrf_token)
-            if not match:
-                app.logger.debug('No fmatch')
-                abort(httplib.UNPROCESSABLE_ENTITY)
+def unautenticated_csrf_protection(func):
+    @wraps(func)
+    def wrapper(*args, **kwds):
+        g.csrf_cookie = Session.create_csrf_token()
+        if request.method not in app.config['CSRF_METHODS']:
             return func(*args, **kwds)
-        return func_wrapper
-    return _unautenticated_csrf_protection
+
+        # First CSRF token from the form
+        form_csrf_token = request.form.get('csrf-token')
+        if not form_csrf_token:
+            app.logger.debug('No form token')
+            abort(httplib.UNPROCESSABLE_ENTITY)
+
+        # Second CSRF token from the cookie
+        cookie_csrf_token = request.cookies.get(Session.CSRF_KEY)
+        if not cookie_csrf_token:
+            app.logger.debug('No cookie')
+            abort(httplib.UNPROCESSABLE_ENTITY)
+
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        try:
+            signer.loads(form_csrf_token, max_age=app.config['MAX_CSRF_TOKEN_AGE'])
+        except SignatureExpired:
+            app.logger.debug('Signature invalid')
+            abort(abort(httplib.UNPROCESSABLE_ENTITY))
+        except BadData:
+            app.logger.debug('bad data')
+            abort(abort(httplib.UNPROCESSABLE_ENTITY))
+
+        match = safe_str_cmp(form_csrf_token, cookie_csrf_token)
+        if not match:
+            app.logger.debug('No fmatch')
+            abort(httplib.UNPROCESSABLE_ENTITY)
+        return func(*args, **kwds)
+    return wrapper
 
 
 def validate_recaptcha(response, remote_ip):

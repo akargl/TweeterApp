@@ -77,9 +77,8 @@ class TemplateManager(object):
 
         twofa_template = TemplateManager.get_template(
             "2fa-template", {
-                "form_target": url_for('activate_2fa', token=kwds['token']),
-                "qrcode" : url_for('activate_2fa', token=kwds['token']),
-                "csrf_token": g.get('csrf_cookie', '')})
+                "login": url_for('login'),
+                "qrcode" : url_for('activate_2fa', token=kwds['token'])})
 
         main_content = alerts + twofa_template
 
@@ -601,10 +600,7 @@ class TemplateManager(object):
                 <h4>Two Factor Authentication Setup</h4>
                 <p>You are almost done! Please start FreeOTP on your smartphone and scan the following QR Code with it:</p>
                 <p><img id="qrcode" src="${qrcode}"></p>
-                <form action="${form_target}" method="POST">
-                    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
-                    <button type="submit" class="btn btn-primary">Complete Registration</button>
-                </form>
+                <a href="${login}" class="btn btn-primary" role="button">Complete Registration</a>
     """,
                 "deregister-template":
                 """
