@@ -341,7 +341,7 @@ def messages():
                 attachment, [g.user.id, recipient.id], True)
             if not wrapper:
                 return TemplateManager.get_index_template(
-                    posts, ['Could not upload file'])
+                    messages, ['Could not upload file'])
             filename = wrapper.get_filename()
 
         message = Message.create(

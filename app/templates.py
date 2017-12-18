@@ -612,7 +612,7 @@ class TemplateManager(object):
                 "2fa-template":
                 """
                 <h4>Two Factor Authentication Setup</h4>
-                <p>You are almost done! Please Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
+                <p>You are almost done! Please use Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
                 <p><img id="qrcode" src="${qrcode}"></p>
                 <h5>Recovery Codes to regain access in case you loose your 2FA device</h5>
                 <ul>
@@ -623,7 +623,7 @@ class TemplateManager(object):
                 "2fa-simple-template":
                 """
                 <h4>Two Factor Authentication Setup</h4>
-                <p>You are almost done! Please Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
+                <p>You are almost done! Please use Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
                 <p><img id="qrcode" src="${qrcode}"></p>
                 <a href="${index}" class="btn btn-primary" role="button">Continue!</a>
     """,
