@@ -598,7 +598,7 @@ class TemplateManager(object):
                 "2fa-template":
                 """
                 <h4>Two Factor Authentication Setup</h4>
-                <p>You are almost done! Please start FreeOTP on your smartphone and scan the following QR Code with it:</p>
+                <p>You are almost done! Please Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
                 <p><img id="qrcode" src="${qrcode}"></p>
                 <a href="${login}" class="btn btn-primary" role="button">Complete Registration</a>
     """,

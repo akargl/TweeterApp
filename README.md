@@ -67,14 +67,17 @@ flask initdb
 
 The following users created are:
 
-| Name   | Password            | Administrator |
-|--------|---------------------|---------------|
-| root   | root                | yes           |
-| admin  | admin               | yes           |
-| Max    | max_password_123    | no            |
-| Alex   | alex_password_123   | no            |
-| Robert | robert_password_123 | no            |
-| Anna   | anna_password_123   | no            |
+
+| Name   | Password            | OTP Token        | Administrator |
+|--------|---------------------|------------------|---------------|
+| root   | root                | OLUZCVLVD2BKCBMP | yes           |
+| admin  | admin               | 2NSG4USG6OYEQZP3 | yes           |
+| Max    | max_password_123    | A3VDR4PZZYZDCAU7 | no            |
+| Alex   | alex_password_123   | PMRJMUAUIPOGKUSV | no            |
+| Robert | robert_password_123 | UYNKXN3BOBV2H2KG | no            |
+| Anna   | anna_password_123   | 4XPLBU5GTDPT72H2 | no            |
+
+The test users use a fixed OTP secret. Use Google authenticator or any other TOTP app to manually load the the secret to retrieve the 2FA-token.
 
 ### Seed Database
 
@@ -160,7 +163,6 @@ No user data is put into theses contexts.
 
 Set to `1; mode=block`.
 
-
 > [1 FuzzyCoin] CSP: Disable eval functions.
 
 Implicitly disallowed with our settings for `script-src`.
@@ -233,7 +235,10 @@ The user can reset their password via a password reset feature. The user receive
 
 Google Recaptcha is used on registration and login pages.
 
-> ~~[2 FuzzyCoins] Use 2nd factor authentication; e.g. OTP or hardware token. Think about backup codes in case of loss of 2nd factor.~~
+> [2 FuzzyCoins] Use 2nd factor authentication; e.g. OTP or hardware token. Think about backup codes in case of loss of 2nd factor.
+
+* We implement 2FA authentication based on TOTP.
+* When registrating, the user can copy 5 recovery codes to get access in case of loss of the 2nd factor.
 
 > ~~[2 FuzzyCoins] Use TLS in your web server, not the web app; e.g. via Let's Encrypt. For testing purposes, you can also use a self-signed certificate.~~
 
@@ -296,7 +301,8 @@ Session (and CSRF) cookie is set to `secure` and `HTTPOnly`.
 
 > [1 point] Check your deserialization. Only deserialize authenticated data. Alternative: Use e.g. JSON
 
-We do not put anything inside the session cookie except the identifier and a timestamp. However, the cookie is signed and therefore, we can trust this value.
+We do not put anything inside the session cookie except the identifier and a timestamp. 
+However, the cookie is signed and therefore, we can trust this value.
 
 ### Optional walls
 

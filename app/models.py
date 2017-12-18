@@ -41,7 +41,11 @@ class User:
         }
 
     def get_totp_uri(self):
-        return pyotp.totp.TOTP(self.otp_secret).provisioning_uri(self.username, issuer_name='Tweeter')
+
+        uri = pyotp.totp.TOTP(self.otp_secret).provisioning_uri(self.username, issuer_name='Tweeter')
+        app.logger.debug(self.otp_secret)
+        app.logger.debug(uri)
+        return uri
 
     def verify_twofa(self, token):
         totp = pyotp.TOTP(self.otp_secret)
@@ -112,7 +116,7 @@ class User:
             return []
         users = []
         for r in result:
-            users.append(User(r['id'], r['username'], r['email'], bool(r['is_admin'])))
+            users.append(User(r['id'], r['username'], r['email'], bool(r['is_admin']), r['otp_secret']))
         return users
 
     @staticmethod
@@ -205,7 +209,7 @@ class User:
         return salt['password_salt']
 
     @staticmethod
-    def create(username, email, salt, hashed_password, is_admin=False):
+    def create(username, email, salt, hashed_password, is_admin=False, otp_secret=None):
         # usernames are case insensitive so we need to check first regardless
         # of unique constraint
         if User.get_user_by_name(username):
@@ -215,7 +219,9 @@ class User:
             app.logger.debug("Email already exists")
             return None
 
-        otp_secret = pyotp.random_base32()
+        if not otp_secret:
+            otp_secret = pyotp.random_base32()
+
         result = insert_db(
             'INSERT into Users (username, email, password_salt, password_token, is_admin, otp_secret) VALUES (?, ?, ?, ?, ?, ?)', [
                 username, email, salt, hashed_password, int(is_admin), otp_secret])
