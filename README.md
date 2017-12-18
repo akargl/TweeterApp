@@ -68,7 +68,7 @@ flask initdb
 The following users created are:
 
 
-| Name   | Password            | OTP Token        | Administrator |
+| Name   | Password            | TOTP Token       | Administrator |
 |--------|---------------------|------------------|---------------|
 | root   | root                | OLUZCVLVD2BKCBMP | yes           |
 | admin  | admin               | 2NSG4USG6OYEQZP3 | yes           |

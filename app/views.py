@@ -2,7 +2,6 @@ import os
 import httplib
 import datetime
 from base64 import b64encode
-from io import BytesIO
 import flask_mail
 import pyqrcode
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify, flash
@@ -115,7 +114,8 @@ def login():
             return TemplateManager.get_login_template(
                 ["Invalid Login or password"])
 
-        if not user.verify_twofa(otptoken):
+        match, used_recovery_code = user.verify_twofa(otptoken)
+        if not match:
             return TemplateManager.get_login_template(
                 ['2FA token invalid.'])
 
@@ -125,11 +125,26 @@ def login():
                 ["Could not create session"])
 
         # Make the response and set the cookie
-        url = url_for('index')
-        response = make_response(redirect(url, code=httplib.SEE_OTHER))
+        if used_recovery_code:
+            url = url_for('retrieve_2fa_code')
+        else:
+            url = url_for('index')
 
+        response = make_response(redirect(url, code=httplib.SEE_OTHER))
         set_cookie(response, Session.SESSION_KEY, session_token, app.config['MAX_SESSION_AGE'])
         return response
+
+
+@app.route('/retrieve_2fa_code')
+@authentication_required()
+def retrieve_2fa_code():
+    signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    user_token = signer.dumps('{0}'.format(g.user.id))
+
+    return TemplateManager.get_2fa_simple_template(user_token), httplib.OK, {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0' }
 
 
 @app.route("/reset_password", methods=['GET', 'POST'])
@@ -240,7 +255,7 @@ def register():
         user_token = signer.dumps("{0}".format(user.id))
 
         flash('Registration complete. Please login.')
-        return TemplateManager.get_2fa_template(token=user_token), httplib.OK, {
+        return TemplateManager.get_2fa_template(token=user_token, backup_codes=user.otp_backup_codes), httplib.OK, {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0' }
@@ -248,9 +263,6 @@ def register():
 
 @app.route('/activate_2fa/<string:token>', methods=['GET'])
 def activate_2fa(token):
-    if already_logged_in(request):
-        return '', httplib.NO_CONTENT
-
     # Validate the 2FA token in order to retrieve the user id
     signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
     try:
@@ -270,20 +282,11 @@ def activate_2fa(token):
         app.logger.debug('2FA User not found')
         return redirect(url_for('login'))
 
-    if request.method == 'GET':
-        url = pyqrcode.create(user.get_totp_uri())
-        stream = BytesIO()
-        url.svg(stream, scale=3)
-
-        return stream.getvalue(), httplib.OK, {
-            'Content-Type': 'image/svg+xml',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'}
-    elif request.method == 'POST':
-        flash('Two Factor auth activated. Please login.')
-        app.logger.debug('2FA activated')
-        return redirect(url_for('login'))
+    return user.get_totp_qrcode(), httplib.OK, {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'}
 
 
 @app.route("/deregister", methods=['GET', 'POST'])
