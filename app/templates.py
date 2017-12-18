@@ -72,6 +72,23 @@ class TemplateManager(object):
         return main_template
 
     @staticmethod
+    def get_2fa_template(errors=[], **kwds):
+        alerts = TemplateManager.render_errors(errors)
+
+        twofa_template = TemplateManager.get_template(
+            "2fa-template", {
+                "form_target": url_for('activate_2fa', token=kwds['token']),
+                "qrcode" : url_for('activate_2fa', token=kwds['token']),
+                "csrf_token": g.get('csrf_cookie', '')})
+
+        main_content = alerts + twofa_template
+
+        main_template = TemplateManager.get_template(
+            "simple-main-template", {"main_title": "Activate 2FA", "main_content": main_content})
+
+        return main_template
+
+    @staticmethod
     def get_deregister_template(errors=[]):
         alerts = TemplateManager.render_errors(errors)
 
@@ -519,6 +536,10 @@ class TemplateManager(object):
         <label for="password">Password</label>
         <input type="password" class="form-control" id="password" name="password" placeholder="">
     </div>
+    <div class="form-group">
+        <label for="otptoken">2FA-Token</label>
+        <input type="otptoken" class="form-control" id="otptoken" name="otptoken" placeholder="">
+    </div>
     ${recaptcha}
     <button type="submit" class="btn btn-primary">Login</button>
     <h5><a href="reset_password">Forgot your password?</a></h5>
@@ -574,6 +595,16 @@ class TemplateManager(object):
     ${recaptcha}
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
+    """,
+                "2fa-template":
+                """
+                <h4>Two Factor Authentication Setup</h4>
+                <p>You are almost done! Please start FreeOTP on your smartphone and scan the following QR Code with it:</p>
+                <p><img id="qrcode" src="${qrcode}"></p>
+                <form action="${form_target}" method="POST">
+                    <input type="hidden" name="csrf-token" value="${csrf_token}"/>
+                    <button type="submit" class="btn btn-primary">Complete Registration</button>
+                </form>
     """,
                 "deregister-template":
                 """

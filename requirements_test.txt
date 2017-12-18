@@ -10,6 +10,8 @@ loremipsum==1.0.5
 MarkupSafe==1.0
 pluggy==0.6.0
 py==1.5.2
+pyotp==2.2.6
+PyQRCode==1.2.1
 pytest==3.3.1
 six==1.11.0
 Werkzeug==0.13

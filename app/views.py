@@ -2,8 +2,11 @@ import os
 import httplib
 import datetime
 from base64 import b64encode
+from io import BytesIO
 import flask_mail
+import pyqrcode
 from flask import request, redirect, url_for, make_response, g, abort, send_file, jsonify, flash
+from itsdangerous import BadData, SignatureExpired, URLSafeTimedSerializer
 from app import app, mail
 from helpers import authentication_required, validate_recaptcha, already_logged_in, \
                     unautenticated_csrf_protection, recaptcha_protected, recaptcha_protection
@@ -93,11 +96,12 @@ def index():
 
 
 @app.route("/login", methods=['GET', 'POST'])
-@unautenticated_csrf_protection
+@unautenticated_csrf_protection()
 @recaptcha_protected('get_login_template')
 def login():
     # If the user is already logged in, just display the index
     if already_logged_in(request):
+        flash('Already logged in.')
         return redirect(url_for('index'))
 
     # Post: params[username, password]
@@ -105,6 +109,7 @@ def login():
         return TemplateManager.get_login_template()
     else:
         username = request.form['username'].strip()
+        otptoken = request.form['otptoken'].strip()
         password = request.form['password']
 
         user = User.check_password(username, password)
@@ -112,13 +117,20 @@ def login():
             return TemplateManager.get_login_template(
                 ["Invalid Login or password"])
 
+        if not user.twofa_activated:
+            return TemplateManager.get_login_template(
+                ['2FA has not been activated. Please contact your administrator.'])
+
+        if not user.verify_twofa(otptoken):
+            return TemplateManager.get_login_template(
+                ['2FA token invalid.'])
+
         result, session_token, csrf_token = Session.new_session(user)
         if not result:
             return TemplateManager.get_login_template(
                 ["Could not create session"])
 
-        # Make the resp
-        # onse and set the cookie
+        # Make the response and set the cookie
         url = url_for('index')
         response = make_response(redirect(url, code=httplib.SEE_OTHER))
 
@@ -127,11 +139,12 @@ def login():
 
 
 @app.route("/reset_password", methods=['GET', 'POST'])
-@unautenticated_csrf_protection
+@unautenticated_csrf_protection()
 @recaptcha_protected('get_reset_password_template')
 def reset_password():
     # If the user is already logged in, just display the index
     if already_logged_in(request):
+        flash('Already logged in.')
         return redirect(url_for('index'))
 
     if request.method == 'GET':
@@ -161,10 +174,11 @@ def reset_password():
 
 
 @app.route("/update_password/<token>", methods=['GET', 'POST'])
-@unautenticated_csrf_protection
+@unautenticated_csrf_protection()
 def update_password(token):
     # If the user is already logged in, just display the index
     if already_logged_in(request):
+        flash('Already logged in.')
         return redirect(url_for('index'))
 
     resp = recaptcha_protection('get_update_password_template', token=token)
@@ -176,7 +190,6 @@ def update_password(token):
         app.logger.debug('Invalid password recovery token.')
         [flash(e) for e in errors]
         return redirect(url_for('login'))
-
 
     if request.method == 'GET':
         return TemplateManager.get_update_password_template([], token=reset_token.token)
@@ -203,12 +216,13 @@ def logout():
 
 
 @app.route("/register", methods=['GET', 'POST'])
-@unautenticated_csrf_protection
+@unautenticated_csrf_protection()
 @recaptcha_protected('get_register_template')
 def register():
     # Post: params[username, password
     # If the user is already logged in, just display the index
     if already_logged_in(request):
+        flash('Already logged in.')
         return redirect(url_for('index'))
 
     if request.method == 'GET':
@@ -229,8 +243,62 @@ def register():
             errors.append('User already exists')
             return TemplateManager.get_register_template(errors)
 
-        flash('Succesfully created user. Please login!')
-        return redirect(url_for('login'), code=httplib.SEE_OTHER)
+        signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+        user_token = signer.dumps("{0}".format(user.id))
+
+        return TemplateManager.get_2fa_template(token=user_token), httplib.OK, {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0' }
+
+
+@app.route('/activate_2fa/<string:token>', methods=['GET', 'POST'])
+@unautenticated_csrf_protection(False)
+def activate_2fa(token):
+    # TODO: What to do if user is already logged in
+
+    # Validate the 2FA token in order to retrieve the user id
+    signer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        user_id = int(signer.loads(token, max_age=app.config['MAX_2FA_TOKEN_AGE']))
+    except SignatureExpired:
+        flash('Invalid 2FA activation token. Please try again or contact your administrator.', 'error')
+        app.logger.debug('2FA Signature invalid')
+        return redirect(url_for('login'))
+    except BadData:
+        flash('Invalid 2FA activation token. Please try again or contact your administrator.', 'error')
+        app.logger.debug('2FA bad data')
+        return redirect(url_for('login'))
+
+    user = User.get_user_by_id(user_id)
+    if not user:
+        flash('Invalid user. Please try again or contact your administrator.', 'error')
+        app.logger.debug('2FA User not found')
+        return redirect(url_for('login'))
+
+    if user.twofa_activated:
+        flash('User already activated 2FA authentication.')
+        app.logger.debug('2FA already activated', 'error')
+        return redirect(url_for('login'))
+
+    if request.method == 'GET':
+        url = pyqrcode.create(user.get_totp_uri())
+        stream = BytesIO()
+        url.svg(stream, scale=3)
+
+        return stream.getvalue(), httplib.OK, {
+            'Content-Type': 'image/svg+xml',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'}
+    elif request.method == 'POST':
+        if len(user.activate_twofa()):
+            flash('Could not activate 2FA authentication.', 'error')
+            app.logger.debug('2FA activated')
+        else:
+            flash('Two Factor auth activated. Please login.')
+            app.logger.debug('2FA activated')
+        return redirect(url_for('login'))
 
 
 @app.route("/deregister", methods=['GET', 'POST'])
