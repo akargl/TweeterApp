@@ -72,6 +72,36 @@ class TemplateManager(object):
         return main_template
 
     @staticmethod
+    def get_2fa_template(errors=[], **kwds):
+        alerts = TemplateManager.render_errors(errors)
+
+        backup_codes = "\n".join(['<li>{0}</li>'.format(c) for c in kwds['backup_codes']])
+        twofa_template = TemplateManager.get_template(
+            "2fa-template", {
+                "login": url_for('login'),
+                "backup_codes": backup_codes,
+                "qrcode" : url_for('activate_2fa', token=kwds['token'])})
+
+        main_content = alerts + twofa_template
+
+        main_template = TemplateManager.get_template(
+            "simple-main-template", {"main_title": "Activate 2FA", "main_content": main_content})
+
+        return main_template
+
+    @staticmethod
+    def get_2fa_simple_template(token):
+        twofa_template = TemplateManager.get_template(
+            "2fa-simple-template", {
+                "index": url_for('index'),
+                "qrcode" : url_for('activate_2fa', token=token)})
+
+        main_template = TemplateManager.get_template(
+            "simple-main-template", {"main_title": "Reset 2FA", "main_content": twofa_template})
+
+        return main_template
+
+    @staticmethod
     def get_deregister_template(errors=[]):
         alerts = TemplateManager.render_errors(errors)
 
@@ -519,6 +549,10 @@ class TemplateManager(object):
         <label for="password">Password</label>
         <input type="password" class="form-control" id="password" name="password" placeholder="">
     </div>
+    <div class="form-group">
+        <label for="otptoken">2FA-Token</label>
+        <input type="otptoken" class="form-control" id="otptoken" name="otptoken" placeholder="">
+    </div>
     ${recaptcha}
     <button type="submit" class="btn btn-primary">Login</button>
     <h5><a href="reset_password">Forgot your password?</a></h5>
@@ -574,6 +608,24 @@ class TemplateManager(object):
     ${recaptcha}
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
+    """,
+                "2fa-template":
+                """
+                <h4>Two Factor Authentication Setup</h4>
+                <p>You are almost done! Please Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
+                <p><img id="qrcode" src="${qrcode}"></p>
+                <h5>Recovery Codes to regain access in case you loose your 2FA device</h5>
+                <ul>
+                    ${backup_codes}
+                </ul>
+                <a href="${login}" class="btn btn-primary" role="button">Complete Registration</a>
+    """,
+                "2fa-simple-template":
+                """
+                <h4>Two Factor Authentication Setup</h4>
+                <p>You are almost done! Please Google Authenticator or any other TOTP app on your smartphone and scan the following QR Code with it:</p>
+                <p><img id="qrcode" src="${qrcode}"></p>
+                <a href="${index}" class="btn btn-primary" role="button">Continue!</a>
     """,
                 "deregister-template":
                 """

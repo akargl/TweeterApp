@@ -3,9 +3,13 @@ import re
 import hashlib
 import time
 import imghdr
+from io import BytesIO
 from base64 import b64encode
 from difflib import SequenceMatcher
 from os import path
+import pyotp
+import pyqrcode
+from flask import json
 from werkzeug.utils import secure_filename
 from werkzeug.security import safe_str_cmp, DEFAULT_PBKDF2_ITERATIONS
 from itsdangerous import URLSafeTimedSerializer, BadData, SignatureExpired
@@ -24,12 +28,15 @@ class User:
     SALT_LENGTH = 32
     HASH_ALGO = 'sha256'
     HASH_ITERATIONS = 50000
+    NR_RECOVERY_TOKENS = 10
 
-    def __init__(self, id, username, email, is_admin):
+    def __init__(self, id, username, email, is_admin, otp_secret, otp_backup_codes):
         self.id = id
         self.username = username
         self.is_admin = is_admin
         self.email = email
+        self.otp_secret = otp_secret
+        self.otp_backup_codes = json.loads(otp_backup_codes)
 
     def serialize(self):
         return {
@@ -37,6 +44,44 @@ class User:
             'username': self.username,
             'is_admin': self.is_admin,
         }
+
+    def get_totp_uri(self):
+        uri = pyotp.totp.TOTP(self.otp_secret).provisioning_uri(self.username, issuer_name='Tweeter')
+        return uri
+
+    def get_totp_qrcode(self):
+        url = pyqrcode.create(self.get_totp_uri())
+        stream = BytesIO()
+        url.svg(stream, scale=3)
+        return stream.getvalue()
+
+    def verify_twofa(self, token):
+        totp = pyotp.TOTP(self.otp_secret)
+        totp_verify = totp.verify(token, valid_window=15)
+
+        # Already succesful
+        if totp_verify:
+            return True, False
+
+        # Try if the token is a backup codes
+        # Make a timing safe comparison over all elements in the list
+        match = False
+        for e in self.otp_backup_codes:
+            match |= safe_str_cmp(e, token)
+
+        if not match:
+            return False, False
+
+        # Clear the token and reserialize
+        self.otp_backup_codes.remove(token)
+        json_recovery_tokens = json.dumps(self.otp_backup_codes)
+
+        result = insert_db('UPDATE Users SET otp_backup_codes = ? WHERE id = ?', [json_recovery_tokens, self.id])
+        if not result:
+            return False, False
+
+        # We used one of the backup codes
+        return True, True
 
     def update_password(self, new_password):
         errors = User.verify_password_policy(new_password)
@@ -103,7 +148,8 @@ class User:
             return []
         users = []
         for r in result:
-            users.append(User(r['id'], r['username'], r['email'], bool(r['is_admin'])))
+            users.append(User(r['id'], r['username'], r['email'],
+                              bool(r['is_admin']), r['otp_secret'], r['otp_backup_codes']))
         return users
 
     @staticmethod
@@ -142,48 +188,48 @@ class User:
     def get_user_by_id(user_id):
         app.logger.debug(
             "User::get_user_by_id called with {:d}".format(user_id))
-        user_data = query_db(
+        u = query_db(
             'SELECT * from Users WHERE id = ?', [user_id], one=True)
-        if user_data is None:
+        if u is None:
             return None
-        return User(user_data['id'], user_data[
-                    'username'], user_data['email'], bool(user_data['is_admin']))
+        return User(u['id'], u['username'], u['email'],
+                    u['is_admin'], u['otp_secret'], u['otp_backup_codes'])
 
     @staticmethod
     def get_user_by_name(username):
-        user_data = query_db(
+        u = query_db(
             'SELECT * from Users WHERE LOWER(username) = LOWER(?)',
             [username],
             one=True)
-        if user_data is None:
+        if u is None:
             return None
-        return User(user_data['id'], user_data[
-                    'username'], user_data['email'], user_data['is_admin'])
+        return User(u['id'], u['username'], u['email'],
+                    u['is_admin'], u['otp_secret'], u['otp_backup_codes'])
 
     @staticmethod
     def get_user_by_email(email):
-        user_data = query_db(
+        u = query_db(
             'SELECT * from Users WHERE email = ?',
             [email],
             one=True)
-        if user_data is None:
+        if u is None:
             return None
-        return User(user_data['id'], user_data[
-                    'username'], user_data['email'], user_data['is_admin'])
+        return User(u['id'], u['username'], u['email'],
+                    u['is_admin'], u['otp_secret'], u['otp_backup_codes'])
 
     @staticmethod
     def get_and_validate_user(username, hashed_password):
-        user_data = query_db(
+        u = query_db(
             'SELECT * FROM Users WHERE LOWER(username) = LOWER(?)',
             [username],
             one=True)
-        if user_data is None:
+        if u is None:
             return None
         if not User.password_compare(
-                user_data['password_token'], hashed_password):
+                u['password_token'], hashed_password):
             return None
-        return User(user_data['id'], user_data[
-                    'username'], user_data['email'], user_data['is_admin'])
+        return User(u['id'], u['username'], u['email'],
+                    u['is_admin'], u['otp_secret'], u['otp_backup_codes'])
 
     @staticmethod
     def get_salt(username):
@@ -196,7 +242,7 @@ class User:
         return salt['password_salt']
 
     @staticmethod
-    def create(username, email, salt, hashed_password, is_admin=False):
+    def create(username, email, salt, hashed_password, is_admin=False, otp_secret=None):
         # usernames are case insensitive so we need to check first regardless
         # of unique constraint
         if User.get_user_by_name(username):
@@ -205,9 +251,18 @@ class User:
         if User.get_user_by_email(email):
             app.logger.debug("Email already exists")
             return None
+
+        if not otp_secret:
+            otp_secret = pyotp.random_base32()
+
+        otp_recovery_tokens = []
+        for i in range(User.NR_RECOVERY_TOKENS):
+            otp_recovery_tokens.append(pyotp.random_base32())
+
+        json_recovery_tokens = json.dumps(otp_recovery_tokens)
         result = insert_db(
-            'INSERT into Users (username, email, password_salt, password_token, is_admin) VALUES (?, ?, ?, ?, ?)', [
-                username, email, salt, hashed_password, int(is_admin)])
+            'INSERT into Users (username, email, password_salt, password_token, is_admin, otp_secret, otp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+                username, email, salt, hashed_password, int(is_admin), otp_secret, json_recovery_tokens])
         if not result:
             return None
         return User.get_user_by_name(username)
@@ -320,7 +375,7 @@ class Message:
                 user_id])
         messages = []
         for r in result:
-            messages.append(Message(r['author_id'], r['recipient_id'], 
+            messages.append(Message(r['author_id'], r['recipient_id'],
                                     r['content'], r['filename'], r['timestamp']))
         return messages
 

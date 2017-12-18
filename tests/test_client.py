@@ -6,6 +6,7 @@ import json
 import tempfile
 import pytest
 import time
+import pyotp
 from StringIO import StringIO
 from base64 import b64encode
 from urlparse import urlparse
@@ -54,10 +55,13 @@ def upload_file(filename):
         models.FileWrapper.create(panda_file, [1], False)
 
 
-def login(client, username, password):
+def login(client, username, password, otp_secret='roototpsecret'):
+    totp = pyotp.TOTP(otp_secret)
+
     return client.post('/login', data=dict(
         username=username,
-        password=password
+        password=password,
+        otptoken=totp.now()
     ), follow_redirects=True)
 
 
@@ -133,7 +137,6 @@ def test_successful_login_case_sensitivity(client):
 
 def test_wrong_username_login(client):
     response = login(client, 'foobar', 'root')
-    print response.data
     assert b'Invalid Login or password' in response.data
 
 
@@ -159,7 +162,8 @@ def test_successful_register(client):
         email='myuser@fobar.com',
         password='MyPassWord'
     ), follow_redirects=True)
-    assert b'Login' in response.data
+
+    assert b'Activate 2FA' in response.data
     assert models.User.get_user_by_name('myuser')
 
 
@@ -591,7 +595,6 @@ def test_api_valid_file_access(client):
         upload_file(f)
 
         route = '/api/files/{:d}'.format(i+1)
-        print route
         response = client.get(route, headers=http_basic_headers('root', 'root'))
 
         assert response.status_code == 200
@@ -619,7 +622,7 @@ def test_api_get_users_no_admin(client):
 
 
 def test_administration_normal_user(client):
-    login(client, 'foo', 'mypassword')
+    login(client, 'foo', 'mypassword', 'foootpsecret')
 
     response = client.get('/administration')
     assert response.status_code == 401
@@ -633,7 +636,7 @@ def test_administration_admin_user(client):
 
 
 def test_update_user_no_admin(client):
-    login(client, 'foo', 'mypassword')
+    login(client, 'foo', 'mypassword', 'foootpsecret')
 
     response = client.put('/users/2', data=dict({ 'is_admin': '1' }))
     assert response.status_code == 401
@@ -656,7 +659,7 @@ def test_update_user_admin(client):
 
 
 def test_delete_user_no_admin(client):
-    login(client, 'foo', 'mypassword')
+    login(client, 'foo', 'mypassword', 'foootpsecret')
 
     response = client.delete('/users/2')
     assert response.status_code == 401
@@ -751,6 +754,10 @@ def test_reset_password_clears_pending_request_tokens(client):
         assert models.PasswordRecoveryTokens.pending_reset_tokens() == 2
         reset_link = password_reset_link(outbox[1].html)
 
+        resp = client.post(reset_link, data=dict({ 'password' : 'mychangedpassword' }), follow_redirects=True)
+        assert resp.status_code == 200
+        assert b'Passwort has been changed. Please login with your new password.' in resp.data
+        assert models.PasswordRecoveryTokens.pending_reset_tokens() == 0
 
 
 def test_update_password_wrong_token(client):

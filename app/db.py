@@ -69,18 +69,18 @@ def seed_test_db():
     """ Seed the database for testing purpose """
     from models import Post, Message
 
-    create_user('root', 'root', 'root@root.com',  True)
-    create_user('foo', 'mypassword', 'foo@root.com', False)
+    create_user('root', 'root', 'root@root.com',  True, 'roototpsecret')
+    create_user('foo', 'mypassword', 'foo@root.com', False, 'foootpsecret')
     Post.create(1, 'My news', None)
     Message.create(2, 1, 'My message', None)
 
 
-def create_user(username, password, email, is_admin):
+def create_user(username, password, email, is_admin, otp_secret=None):
     # Import user only here to avoid a circular dependency
     from models import User
 
     salt, hashed_password = User.create_salt_and_hashed_password(password)
-    user = User.create(username, email, salt, hashed_password, is_admin)
+    user = User.create(username, email, salt, hashed_password, is_admin, otp_secret)
 
     return user
 
@@ -125,12 +125,12 @@ def seed_db():
     from models import Post, Message, FileWrapper
 
     user_seed = [
-        ('root', 'root', 'root@rschilling.net', True),
-        ('admin', 'admin', 'admin@rschilling.net', True),
-        ('Max', 'max_password_123', 'max@rschilling.net', False),
-        ('Alex', 'alex_password_123', 'alexroot@rschilling.net', False),
-        ('Robert', 'robert_password_123', 'robert@rschilling.net', False),
-        ('Anna', 'anna_password_123', 'anna@rschilling.net', False),
+        ('root', 'root', 'root@rschilling.net', True, 'OLUZCVLVD2BKCBMP'),
+        ('admin', 'admin', 'admin@rschilling.net', True, '2NSG4USG6OYEQZP3'),
+        ('Max', 'max_password_123', 'max@rschilling.net', False, 'A3VDR4PZZYZDCAU7'),
+        ('Alex', 'alex_password_123', 'alexroot@rschilling.net', False, 'PMRJMUAUIPOGKUSV'),
+        ('Robert', 'robert_password_123', 'robert@rschilling.net', False, 'UYNKXN3BOBV2H2KG'),
+        ('Anna', 'anna_password_123', 'anna@rschilling.net', False, '4XPLBU5GTDPT72H2'),
     ]
     nr_public_posts = 100
     nr_private_posts = 100
