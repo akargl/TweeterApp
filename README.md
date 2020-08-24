@@ -24,6 +24,8 @@ The following endpoints are available:
 
 ## Deployment
 
+Add your Rechaptcha and Sentry API Keys to config.py if you want to use them.
+
 ## Using Docker
 
 Assuming `docker` and `docker-compose` are already installed, the app can simply be started with:
